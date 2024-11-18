@@ -7,9 +7,9 @@ const Index = () => {
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-4 mb-6">
             <img
-              src="https://www.upiicsa.ipn.mx/assets/files/upiicsa/Inicio/LOGO-UPIICSA.png"
+              src="/lovable-uploads/f5d0b981-f909-4467-b448-4489a5c728e2.png"
               alt="UPIICSA Logo"
-              className="h-16"
+              className="h-20"
             />
             <img
               src="https://www.ipn.mx/assets/files/main/img/template/pleca-ipn.png"
@@ -21,7 +21,7 @@ const Index = () => {
             Asistente Virtual UPIICSA
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-            ¡Hola! Estoy aquí para ayudarte con información sobre trámites, servicios y dudas generales sobre UPIICSA.
+            ¡Hola! Estoy aquí para ayudarte con información sobre trámites, servicios y cualquier duda que tengas sobre UPIICSA. ¡También podemos platicar de forma casual! 😊
           </p>
         </div>
         

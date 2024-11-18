@@ -5,7 +5,7 @@ import { SuggestedQuestions } from "./SuggestedQuestions";
 import { shuffle } from "lodash";
 
 const TODAS_LAS_PREGUNTAS = {
-  // Información Académica (mantener las preguntas existentes)
+  // Información Académica
   "¿Cuál es el horario de servicios escolares?": 
     "El horario de atención de servicios escolares es de lunes a viernes de 9:00 a 20:00 horas.",
   "¿Cómo inicio mi trámite de titulación?":
@@ -77,6 +77,50 @@ const TODAS_LAS_PREGUNTAS = {
     "UPIICSA cuenta con diversos clubs: Programación, Robótica, Emprendimiento, Idiomas, Ajedrez, Teatro, Danza, Música, entre otros. Visita el departamento de actividades culturales para más información.",
   "¿Cómo me uno a un club?":
     "Para unirte a un club: 1) Visita el departamento de actividades culturales, 2) Revisa los horarios disponibles, 3) Regístrate con tu credencial vigente, 4) ¡Comienza a participar!",
+
+  // Modismos y expresiones coloquiales
+  "¿Qué onda?": "¡Qué onda! ¿Cómo te va? Soy el asistente virtual de UPIICSA, ¡échame un grito si necesitas algo!",
+  "¿Qué tal?": "¡Qué tal! Aquí andamos al 100, ¿en qué te puedo ayudar?",
+  "¿Qué pex?": "¡Qué pex! Soy el asistente de UPIICSA, ¿qué se te ofrece carnalx?",
+  "¿Qué rollo?": "¡Qué rollo! Aquí echándole ganas, ¿qué necesitas?",
+  
+  // Expresiones de ayuda coloquiales
+  "Ayuda": "¡No te preocupes! Estoy aquí para echarte la mano. ¿Qué necesitas?",
+  "Estoy perdido": "¡Tranquilx! Yo te oriento. Dime qué andas buscando y te echo la mano.",
+  "No entiendo nada": "Va, va, vamos paso a paso. ¿Qué es lo que te está causando problemas?",
+  
+  // Información detallada sobre trámites
+  "¿Cómo saco mi credencial?": 
+    "Para sacar tu credencial necesitas:\n1. INE o identificación oficial\n2. Comprobante de inscripción\n3. Foto tamaño infantil\n4. Acudir a servicios escolares en horario de 9:00 a 20:00\n5. El trámite tarda aproximadamente 1 hora",
+  
+  // Ubicaciones específicas con detalles
+  "¿Dónde está la biblioteca?": 
+    "La biblioteca está en el edificio cultural, segundo piso. Horarios:\n- Lunes a Viernes: 7:00 a 21:00\n- Sábados: 8:00 a 14:00\nTip: Los mejores lugares para estudiar están junto a las ventanas 😉",
+  
+  // Consejos de estudiantes
+  "Dame un consejo": [
+    "Arma tu horario con gaps entre clases para hacer tareas o estudiar en la biblio",
+    "Los tacos de la entrada son god, pero llega temprano porque se acaban",
+    "Siempre ten una USB de respaldo, nunca sabes cuándo la vas a necesitar",
+    "Hazte amigo de los profes, te puede ayudar mucho en el futuro",
+    "No dejes todo para el último, los finales pueden ser muy pesados"
+  ],
+
+  // Información sobre clubs y actividades con más detalles
+  "¿Qué actividades hay?": 
+    "¡Hay muchísimas! 🎨 Culturales: teatro, danza, música\n🏃‍♂️ Deportivas: fut, basket, volley\n🤓 Académicas: programación, robótica, emprendimiento\n\nPuedes unirte cuando quieras, ¡solo necesitas tu credencial vigente!",
+  
+  // Expresiones de ánimo
+  "Estoy estresado": [
+    "¡Échale ganas! Recuerda que todo esfuerzo vale la pena 💪",
+    "Un pasito a la vez, tú puedes con esto y más 🌟",
+    "Tómate un break, date una vuelta por el jardín botánico para despejarte 🌿",
+    "¡Ánimo! Todos hemos pasado por ahí, pero al final vale la pena 🎓"
+  ],
+
+  // Información sobre eventos
+  "¿Qué eventos hay?": 
+    "¡Siempre hay algo chido! 🎉\n- Semana UPIICSA (marzo)\n- Torneos deportivos (todo el semestre)\n- Congresos por carrera\n- Hackathones\n- Ferias de empleo\n\nCheca las fechas en www.upiicsa.ipn.mx/eventos",
 };
 
 interface Message {
@@ -105,33 +149,36 @@ export const ChatInterface = () => {
   };
 
   const procesarRespuesta = (pregunta: string): string => {
-    // Detectar si es un saludo o presentación
-    const saludos = ["hola", "buenos días", "buenas tardes", "buenas noches"];
-    const preguntaLower = pregunta.toLowerCase();
+    const preguntaLower = pregunta.toLowerCase().trim();
     
-    // Si el usuario está diciendo su nombre
-    if (preguntaLower.includes("me llamo") || preguntaLower.includes("mi nombre es")) {
+    // Detectar saludos informales
+    if (preguntaLower.includes('que onda') || preguntaLower.includes('que pex') || 
+        preguntaLower.includes('que rollo') || preguntaLower.includes('que tal')) {
+      return TODAS_LAS_PREGUNTAS[Object.keys(TODAS_LAS_PREGUNTAS).find(key => 
+        key.toLowerCase().includes(preguntaLower)) || "¿Qué onda?"];
+    }
+    
+    // Detectar presentaciones y nombres
+    if (preguntaLower.includes('me llamo') || preguntaLower.includes('mi nombre es')) {
       const nombreMatch = pregunta.match(/(?:me llamo|mi nombre es)\s+(\w+)/i);
       if (nombreMatch && nombreMatch[1]) {
         setUserName(nombreMatch[1]);
-        return `¡Encantado de conocerte, ${nombreMatch[1]}! ¿En qué puedo ayudarte hoy?`;
+        return `¡Qué gusto conocerte, ${nombreMatch[1]}! ¿En qué te puedo ayudar? 😊`;
       }
     }
-
-    // Si ya tenemos el nombre del usuario, personalizar respuestas
-    const respuesta = TODAS_LAS_PREGUNTAS[pregunta as keyof typeof TODAS_LAS_PREGUNTAS];
-    
-    if (Array.isArray(respuesta)) {
-      // Si la respuesta es un array (chistes, adivinanzas, frases), elegir una al azar
-      return respuesta[Math.floor(Math.random() * respuesta.length)];
-    } else if (respuesta) {
-      return userName ? respuesta.replace("¿Cuál es tu nombre?", `${userName}`) : respuesta;
+  
+    // Procesar otras preguntas
+    for (const [key, value] of Object.entries(TODAS_LAS_PREGUNTAS)) {
+      if (preguntaLower.includes(key.toLowerCase())) {
+        if (Array.isArray(value)) {
+          return value[Math.floor(Math.random() * value.length)];
+        }
+        return value;
+      }
     }
-
-    // Respuesta por defecto
-    return userName 
-      ? `Lo siento ${userName}, no tengo información específica sobre esa consulta. ¿Puedo ayudarte con algo más?`
-      : "Lo siento, no tengo información específica sobre esa consulta. ¿Puedo ayudarte con algo más?";
+  
+    // Respuesta por defecto más amigable
+    return "¡Ups! No capto bien esa pregunta 😅 ¿Podrías reformularla? O pregúntame sobre trámites, ubicaciones, eventos o hasta échame un '¿qué onda?' 😊";
   };
 
   const handleSendMessage = (text: string) => {
@@ -148,9 +195,7 @@ export const ChatInterface = () => {
     <div className="flex flex-col h-[600px] max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
       <div className="bg-gradient-to-r from-ipn-primary to-ipn-light p-4">
         <h2 className="text-white text-lg font-semibold flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
+          <img src="/lovable-uploads/f5d0b981-f909-4467-b448-4489a5c728e2.png" alt="UPIICSA Logo" className="h-6 w-6" />
           Asistente Virtual UPIICSA
           {userName && <span className="text-sm ml-2">| Hablando con {userName}</span>}
         </h2>
