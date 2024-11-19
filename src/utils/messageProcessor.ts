@@ -22,9 +22,29 @@ const findBestMatch = (userInput: string, possibleMatches: string[]): string | n
   
   const matches = stringSimilarity.findBestMatch(normalizedInput, normalizedMatches);
   
-  if (matches.bestMatch.rating > 0.6) {
+  if (matches.bestMatch.rating > 0.4) { // Reducido el umbral para mayor flexibilidad
     return possibleMatches[matches.bestMatchIndex];
   }
+  return null;
+};
+
+const extractCarrera = (texto: string): string | null => {
+  const carreras = {
+    'informatica': 'IC',
+    'sistemas': 'ISC',
+    'industrial': 'IIA',
+    'mecanica': 'IM',
+    'administracion': 'LA'
+  };
+
+  const textoNormalizado = normalizeText(texto);
+  
+  for (const [keyword, carrera] of Object.entries(carreras)) {
+    if (textoNormalizado.includes(keyword)) {
+      return carrera;
+    }
+  }
+  
   return null;
 };
 
@@ -32,51 +52,41 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
   const lastBotMessage = [...messages].reverse().find(m => m.isBot)?.text;
   const normalizedPregunta = normalizeText(pregunta);
 
-  // Manejar preguntas de seguimiento sobre carreras
-  if (lastBotMessage?.includes("¿Te gustaría saber más detalles sobre alguna carrera")) {
-    const carreras = {
-      isc: "¿Qué significa ISC?",
-      im: "¿Qué significa IM?",
-      ic: "¿Qué significa IC?",
-      iia: "¿Qué significa IIA?",
-      la: "¿Qué significa LA?"
-    };
-
-    for (const [abrev, preguntaCompleta] of Object.entries(carreras)) {
-      if (normalizedPregunta.includes(abrev.toLowerCase())) {
-        return TODAS_LAS_PREGUNTAS[preguntaCompleta];
-      }
+  // Detectar si es una pregunta sobre electivas
+  if (normalizedPregunta.includes('electiva') || normalizedPregunta.includes('optativa')) {
+    const carrera = extractCarrera(pregunta);
+    if (carrera) {
+      return `Para ver tus materias electivas de ${carrera}, sigue estos pasos:\n\n` +
+             `1. Ingresa a SAES (https://www.saes.upiicsa.ipn.mx)\n` +
+             `2. Ve a la sección "Plan de Estudios"\n` +
+             `3. En el menú lateral, selecciona "Optativas/Electivas"\n` +
+             `4. Ahí encontrarás todas las materias disponibles para tu carrera\n\n` +
+             `También puedes consultar con tu coordinador para más información sobre los horarios y disponibilidad.`;
     }
   }
 
-  // Manejar pedidos de clarificación
-  const clarificationPatterns = [
-    /(?:puedes|podrías|puedas) explicar(?:me|lo)?/i,
-    /no (entiendo|entendí)/i,
-    /más detalles/i,
-    /qué significa/i,
-    /podrías decirlo de otra forma/i
-  ];
-
-  if (clarificationPatterns.some(pattern => pattern.test(pregunta))) {
-    // Buscar la última respuesta sustancial del bot
-    const lastResponse = messages
-      .filter(m => m.isBot)
-      .find(m => !m.text.includes("¿Podrías") && !m.text.includes("No estoy seguro"));
-
-    if (lastResponse) {
-      return `Claro, te lo explico de otra forma:\n\n${lastResponse.text}\n\n¿Hay algo específico que te gustaría que te aclare?`;
+  // Si el bot pidió una clarificación y el usuario responde
+  if (lastBotMessage?.includes("¿Podrías explicarme") || lastBotMessage?.includes("Me gustaría ayudarte mejor")) {
+    // Buscar palabras clave en el contexto completo de la conversación
+    const conversationContext = messages.map(m => m.text).join(" ");
+    const contextNormalized = normalizeText(conversationContext);
+    
+    // Detectar temas específicos en el contexto
+    if (contextNormalized.includes("horario")) {
+      return TODAS_LAS_PREGUNTAS["¿Dónde encuentro mi horario de clases?"];
+    }
+    if (contextNormalized.includes("coordinador")) {
+      return TODAS_LAS_PREGUNTAS["¿Cómo contacto a mi coordinador?"];
     }
   }
 
-  // Detectar patrones emocionales
+  // Detectar patrones emocionales y otros casos existentes
   const patronesEmocionales = {
     tristeza: /(triste|mal|deprimid|llorar|solo)/i,
     preocupacion: /(preocupad|nervios|ansios|estres)/i,
     frustracion: /(frustrad|molest|enoj|hartx)/i
   };
 
-  // Si detectamos una emoción en la respuesta del usuario
   for (const [emocion, patron] of Object.entries(patronesEmocionales)) {
     if (patron.test(pregunta)) {
       const respuestasEmocionales = {
@@ -86,23 +96,6 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
       };
       return respuestasEmocionales[emocion as keyof typeof respuestasEmocionales];
     }
-  }
-
-  // Si el usuario dice "sí", "no", o variaciones después de una pregunta del bot
-  if (normalizeText(pregunta).match(/^(si|no|simon|nel|claro|nop|nope|sep|seep|sip)$/)) {
-    if (lastBotMessage?.includes("?")) {
-      if (pregunta.toLowerCase().includes("s")) {
-        return "Me alegro de que quieras hablar. ¿Qué te gustaría compartir? 😊";
-      } else {
-        return "Está bien, respeto tu decisión. ¿Hay algo más en lo que pueda ayudarte? 🤗";
-      }
-    }
-  }
-
-  // Si el usuario repite la misma pregunta
-  const lastUserMessage = [...messages].reverse().find(m => !m.isBot)?.text;
-  if (lastUserMessage && normalizeText(pregunta) === normalizeText(lastUserMessage)) {
-    return "Parece que estás repitiendo tu mensaje. ¿Hay algo específico que no haya quedado claro? Me gustaría ayudarte mejor 😊";
   }
 
   return null;
@@ -124,6 +117,11 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
     }
   }
 
+  // Si la pregunta es muy corta o poco clara, pedir más información
+  if (pregunta.split(' ').length < 4) {
+    return "Me gustaría ayudarte mejor. ¿Podrías darme más detalles sobre lo que necesitas saber? 😊";
+  }
+
   // Buscar la mejor coincidencia en las preguntas predefinidas
   const todasLasPreguntas = Object.keys(TODAS_LAS_PREGUNTAS);
   const bestMatch = findBestMatch(pregunta, todasLasPreguntas);
@@ -137,12 +135,5 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
   }
 
   // Si no encontramos una coincidencia, dar una respuesta que invite a clarificar
-  const respuestasDefault = [
-    "No estoy seguro de entender completamente. ¿Podrías reformular tu pregunta? 🤔",
-    "Me gustaría ayudarte mejor. ¿Podrías dar más detalles sobre lo que necesitas? 😊",
-    "Para poder ayudarte mejor, ¿podrías ser más específico con tu pregunta? 💭",
-    "¿Podrías explicar un poco más lo que necesitas saber? Así podré darte una mejor respuesta 🤗"
-  ];
-  
-  return respuestasDefault[Math.floor(Math.random() * respuestasDefault.length)];
+  return "Para poder ayudarte mejor, ¿podrías explicarme un poco más lo que necesitas? Por ejemplo, si es sobre horarios, trámites, o alguna duda específica de tu carrera 🤔";
 };
