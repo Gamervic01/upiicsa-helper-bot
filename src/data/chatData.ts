@@ -139,5 +139,30 @@ export const TODAS_LAS_PREGUNTAS = {
     "Estoy aquí para ayudarte. ¿Podrías contarme más específicamente qué tipo de ayuda necesitas?",
     "Claro, ¿qué tipo de apoyo estás buscando? Hay varios recursos disponibles en UPIICSA",
     "Por supuesto, ¿es algo académico, personal o administrativo? Así podré orientarte mejor 🤝"
-  ]
+  ],
+  
+  // Información detallada sobre carreras
+  "¿Qué significa ISC?": 
+    "ISC significa Ingeniería en Sistemas Computacionales. Es una carrera enfocada en el desarrollo de software, sistemas computacionales y tecnologías de la información. Los egresados pueden trabajar en desarrollo de software, administración de sistemas, ciberseguridad y más.",
+  
+  "¿Qué significa IM?":
+    "IM significa Ingeniería Mecánica. Esta carrera se enfoca en el diseño, manufactura y mantenimiento de sistemas mecánicos. Los egresados pueden trabajar en industrias como automotriz, aeroespacial, manufactura y más.",
+  
+  "¿Qué significa IC?":
+    "IC significa Ingeniería en Informática. Esta carrera se centra en la gestión de tecnologías de información, redes y sistemas empresariales. Los egresados pueden trabajar en consultoría IT, administración de proyectos tecnológicos y más.",
+  
+  "¿Qué significa IIA?":
+    "IIA significa Ingeniería Industrial y Administrativa. Esta carrera combina conocimientos de ingeniería industrial con habilidades administrativas. Los egresados pueden trabajar en optimización de procesos, gestión de calidad, logística y más.",
+  
+  "¿Qué significa LA?":
+    "LA significa Licenciatura en Administración. Esta carrera forma profesionales en la gestión y dirección de organizaciones. Los egresados pueden trabajar en áreas como recursos humanos, finanzas, marketing y más.",
+
+  "¿Qué significa cada abreviatura?":
+    "En UPIICSA tenemos las siguientes carreras:\n\n" +
+    "- ISC: Ingeniería en Sistemas Computacionales\n" +
+    "- IM: Ingeniería Mecánica\n" +
+    "- IC: Ingeniería en Informática\n" +
+    "- IIA: Ingeniería Industrial y Administrativa\n" +
+    "- LA: Licenciatura en Administración\n\n" +
+    "¿Te gustaría saber más detalles sobre alguna carrera en específico?",
 };
