@@ -9,6 +9,7 @@ import { procesarRespuesta } from "../utils/messageProcessor";
 interface Message {
   text: string;
   isBot: boolean;
+  timestamp: Date;
 }
 
 export const ChatInterface = () => {
@@ -16,14 +17,16 @@ export const ChatInterface = () => {
     {
       text: "¡Hola! Soy el asistente virtual de UPIICSA. ¿En qué puedo ayudarte hoy?",
       isBot: true,
+      timestamp: new Date(),
     },
   ]);
   const [userName, setUserName] = useState<string>("");
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     actualizarPreguntasSugeridas();
-  }, []);
+  }, [messages]); // Actualizar sugerencias basadas en el contexto de la conversación
 
   const actualizarPreguntasSugeridas = () => {
     const todasLasPreguntas = Object.keys(TODAS_LAS_PREGUNTAS);
@@ -32,13 +35,30 @@ export const ChatInterface = () => {
   };
 
   const handleSendMessage = (text: string) => {
-    setMessages((prev) => [...prev, { text, isBot: false }]);
+    const newUserMessage = {
+      text,
+      isBot: false,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, newUserMessage]);
+    setIsTyping(true);
+    
+    // Simular tiempo de "pensamiento" natural
+    const thinkingTime = Math.random() * 1000 + 500; // Entre 500ms y 1500ms
     
     setTimeout(() => {
-      const respuesta = procesarRespuesta(text, setUserName);
-      setMessages((prev) => [...prev, { text: respuesta, isBot: true }]);
+      const respuesta = procesarRespuesta(text, setUserName, messages);
+      const newBotMessage = {
+        text: respuesta,
+        isBot: true,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newBotMessage]);
+      setIsTyping(false);
       actualizarPreguntasSugeridas();
-    }, 1000);
+    }, thinkingTime);
   };
 
   return (
@@ -55,6 +75,13 @@ export const ChatInterface = () => {
         {messages.map((msg, idx) => (
           <ChatMessage key={idx} message={msg.text} isBot={msg.isBot} />
         ))}
+        {isTyping && (
+          <div className="flex items-center space-x-2 text-gray-500">
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
+          </div>
+        )}
       </div>
 
       <div className="p-4 bg-white border-t border-gray-100">

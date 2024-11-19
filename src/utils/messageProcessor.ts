@@ -1,12 +1,18 @@
 import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
 import stringSimilarity from 'string-similarity';
 
+interface Message {
+  text: string;
+  isBot: boolean;
+  timestamp: Date;
+}
+
 const normalizeText = (text: string): string => {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
-    .replace(/[^a-z0-9\s]/g, "") // Solo deja letras, números y espacios
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
     .trim();
 };
 
@@ -16,16 +22,40 @@ const findBestMatch = (userInput: string, possibleMatches: string[]): string | n
   
   const matches = stringSimilarity.findBestMatch(normalizedInput, normalizedMatches);
   
-  // Si la similitud es mayor a 0.6 (60%), consideramos que es una coincidencia válida
   if (matches.bestMatch.rating > 0.6) {
     return possibleMatches[matches.bestMatchIndex];
   }
   return null;
 };
 
-export const procesarRespuesta = (pregunta: string, setUserName: (name: string) => void): string => {
+const getContextualResponse = (pregunta: string, messages: Message[]): string | null => {
+  const lastBotMessage = [...messages].reverse().find(m => m.isBot)?.text;
+  const lastUserMessage = [...messages].reverse().find(m => !m.isBot)?.text;
+
+  // Si el usuario dice "sí", "no", o variaciones después de una pregunta del bot
+  if (normalizeText(pregunta).match(/^(si|no|simon|nel|claro|nop|nope|sep|seep|sip)$/)) {
+    if (lastBotMessage?.includes("?")) {
+      return pregunta.toLowerCase().includes("s") ? 
+        "¡Genial! ¿Hay algo más en lo que pueda ayudarte? 😊" :
+        "Entiendo. ¿Hay algo más en lo que pueda ayudarte? 😊";
+    }
+  }
+
+  // Si el usuario repite la misma pregunta
+  if (lastUserMessage && normalizeText(pregunta) === normalizeText(lastUserMessage)) {
+    return "Parece que estás repitiendo tu pregunta. ¿Podrías reformularla de otra manera? Así podré entenderte mejor 😊";
+  }
+
+  return null;
+};
+
+export const procesarRespuesta = (pregunta: string, setUserName: (name: string) => void, messages: Message[]): string => {
   const preguntaLower = pregunta.toLowerCase().trim();
   
+  // Primero intentamos obtener una respuesta contextual
+  const contextualResponse = getContextualResponse(pregunta, messages);
+  if (contextualResponse) return contextualResponse;
+
   // Detectar presentaciones y nombres con tolerancia a errores
   if (preguntaLower.includes('me llamo') || preguntaLower.includes('mi nombre es')) {
     const nombreMatch = pregunta.match(/(?:me llamo|mi nombre es)\s+(\w+)/i);
@@ -60,6 +90,13 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
     return "¡Qué onda! Aquí andamos al 100, ¿qué se te ofrece? 😎";
   }
 
-  // Respuesta por defecto más amigable
-  return "¡Ups! No capto bien esa pregunta 😅 ¿Podrías reformularla? O pregúntame sobre trámites, ubicaciones, eventos o hasta échame un '¿qué onda?' 😊";
+  // Respuesta por defecto más amigable y conversacional
+  const respuestasDefault = [
+    "¡Ups! No capto bien esa pregunta 😅 ¿Podrías reformularla?",
+    "No estoy seguro de entender. ¿Podrías decirlo de otra manera?",
+    "Mmm... ¿podrías ser más específico? Quiero asegurarme de ayudarte bien 🤔",
+    "Disculpa, pero no entendí bien. ¿Me lo explicas de otra forma? 😊"
+  ];
+  
+  return respuestasDefault[Math.floor(Math.random() * respuestasDefault.length)];
 };
