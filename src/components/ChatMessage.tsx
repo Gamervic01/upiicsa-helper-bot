@@ -28,7 +28,10 @@ export const ChatMessage = ({ message, isBot }: ChatMessageProps) => {
             : "bg-gradient-to-r from-ipn-primary to-ipn-light text-white rounded-tr-none"
         )}
       >
-        <p className="text-sm md:text-base">{message}</p>
+        <p 
+          className="text-sm md:text-base"
+          dangerouslySetInnerHTML={{ __html: message }}
+        />
       </div>
     </div>
   );
