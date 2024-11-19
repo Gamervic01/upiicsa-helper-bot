@@ -113,4 +113,31 @@ export const TODAS_LAS_PREGUNTAS = {
   // Información sobre eventos
   "¿Qué eventos hay?": 
     "¡Siempre hay algo chido! 🎉\n- Semana UPIICSA (marzo)\n- Torneos deportivos (todo el semestre)\n- Congresos por carrera\n- Hackathones\n- Ferias de empleo\n\nCheca las fechas en <a href='https://www.upiicsa.ipn.mx/eventos' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/eventos</a>",
+
+  // Respuestas emocionales y de apoyo
+  "Estoy triste": [
+    "Lamento escuchar que te sientes así. ¿Quieres hablar sobre lo que te preocupa? Estoy aquí para escucharte 🫂",
+    "A veces es normal sentirnos tristes. ¿Te gustaría que te cuente un chiste para animarte un poco? 😊",
+    "Entiendo que te sientas así. ¿Has considerado hablar con el departamento de orientación juvenil? Están para apoyarte 💙"
+  ],
+  "Me siento mal": [
+    "¿Quieres contarme qué te está pasando? A veces hablar ayuda a sentirnos mejor 🤗",
+    "Lamento que te sientas así. ¿Hay algo específico que te preocupe?",
+    "Estoy aquí para escucharte. ¿Te gustaría que te comparta algunos recursos de apoyo disponibles en UPIICSA?"
+  ],
+  "Tengo problemas": [
+    "Entiendo que estés pasando por un momento difícil. ¿Quieres contarme más sobre ello?",
+    "A veces todos necesitamos ayuda. ¿Te gustaría que te conecte con el departamento de orientación?",
+    "Estoy aquí para escucharte y ayudarte a encontrar soluciones 🤝"
+  ],
+  "Me siento solo": [
+    "La escuela puede ser desafiante a veces. ¿Has considerado unirte a alguno de nuestros clubs? Es una excelente manera de conocer personas con intereses similares 🤗",
+    "Entiendo cómo te sientes. ¿Sabías que tenemos varios grupos de estudio y actividades extracurriculares?",
+    "No estás solo/a. UPIICSA tiene una gran comunidad y muchas actividades donde puedes participar 💚"
+  ],
+  "Necesito ayuda": [
+    "Estoy aquí para ayudarte. ¿Podrías contarme más específicamente qué tipo de ayuda necesitas?",
+    "Claro, ¿qué tipo de apoyo estás buscando? Hay varios recursos disponibles en UPIICSA",
+    "Por supuesto, ¿es algo académico, personal o administrativo? Así podré orientarte mejor 🤝"
+  ]
 };

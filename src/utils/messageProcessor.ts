@@ -32,18 +32,39 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
   const lastBotMessage = [...messages].reverse().find(m => m.isBot)?.text;
   const lastUserMessage = [...messages].reverse().find(m => !m.isBot)?.text;
 
+  // Detectar patrones emocionales
+  const patronesEmocionales = {
+    tristeza: /(triste|mal|deprimid|llorar|solo)/i,
+    preocupacion: /(preocupad|nervios|ansios|estres)/i,
+    frustracion: /(frustrad|molest|enoj|hartx)/i
+  };
+
+  // Si detectamos una emoción en la respuesta del usuario
+  for (const [emocion, patron] of Object.entries(patronesEmocionales)) {
+    if (patron.test(pregunta)) {
+      const respuestasEmocionales = {
+        tristeza: "Entiendo que te sientas así. ¿Quieres hablar sobre lo que te preocupa? Estoy aquí para escucharte 🫂",
+        preocupacion: "Es normal sentirse así a veces. ¿Te gustaría que hablemos sobre lo que te preocupa? 🤗",
+        frustracion: "Comprendo tu frustración. ¿Hay algo específico que te esté molestando? Podemos buscar una solución juntos 💪"
+      };
+      return respuestasEmocionales[emocion as keyof typeof respuestasEmocionales];
+    }
+  }
+
   // Si el usuario dice "sí", "no", o variaciones después de una pregunta del bot
   if (normalizeText(pregunta).match(/^(si|no|simon|nel|claro|nop|nope|sep|seep|sip)$/)) {
     if (lastBotMessage?.includes("?")) {
-      return pregunta.toLowerCase().includes("s") ? 
-        "¡Genial! ¿Hay algo más en lo que pueda ayudarte? 😊" :
-        "Entiendo. ¿Hay algo más en lo que pueda ayudarte? 😊";
+      if (pregunta.toLowerCase().includes("s")) {
+        return "Me alegro de que quieras hablar. ¿Qué te gustaría compartir? 😊";
+      } else {
+        return "Está bien, respeto tu decisión. ¿Hay algo más en lo que pueda ayudarte? 🤗";
+      }
     }
   }
 
   // Si el usuario repite la misma pregunta
   if (lastUserMessage && normalizeText(pregunta) === normalizeText(lastUserMessage)) {
-    return "Parece que estás repitiendo tu pregunta. ¿Podrías reformularla de otra manera? Así podré entenderte mejor 😊";
+    return "Parece que estás repitiendo tu mensaje. ¿Hay algo específico que no haya quedado claro? Me gustaría ayudarte mejor 😊";
   }
 
   return null;
@@ -61,7 +82,7 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
     const nombreMatch = pregunta.match(/(?:me llamo|mi nombre es)\s+(\w+)/i);
     if (nombreMatch && nombreMatch[1]) {
       setUserName(nombreMatch[1]);
-      return `¡Qué gusto conocerte, ${nombreMatch[1]}! ¿En qué te puedo ayudar? 😊`;
+      return `¡Qué gusto conocerte, ${nombreMatch[1]}! ¿Cómo te puedo ayudar hoy? 😊`;
     }
   }
 
@@ -84,18 +105,12 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
     return respuesta;
   }
 
-  // Detectar saludos informales con tolerancia a errores
-  const saludosInformales = ['que onda', 'que tal', 'que pex', 'que rollo', 'k onda', 'q onda', 'ke onda', 'k tal', 'q tal'];
-  if (saludosInformales.some(saludo => normalizeText(preguntaLower).includes(normalizeText(saludo)))) {
-    return "¡Qué onda! Aquí andamos al 100, ¿qué se te ofrece? 😎";
-  }
-
-  // Respuesta por defecto más amigable y conversacional
+  // Respuesta por defecto más empática y conversacional
   const respuestasDefault = [
-    "¡Ups! No capto bien esa pregunta 😅 ¿Podrías reformularla?",
-    "No estoy seguro de entender. ¿Podrías decirlo de otra manera?",
-    "Mmm... ¿podrías ser más específico? Quiero asegurarme de ayudarte bien 🤔",
-    "Disculpa, pero no entendí bien. ¿Me lo explicas de otra forma? 😊"
+    "No estoy seguro de entender completamente. ¿Podrías contarme más sobre eso? 🤔",
+    "Me gustaría ayudarte mejor. ¿Podrías explicarme un poco más? 😊",
+    "Hmm... quiero asegurarme de entenderte bien. ¿Podrías decirlo de otra forma? 💭",
+    "¿Podrías darme más detalles? Así podré ayudarte mejor 🤗"
   ];
   
   return respuestasDefault[Math.floor(Math.random() * respuestasDefault.length)];
