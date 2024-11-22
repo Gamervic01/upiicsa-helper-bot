@@ -43,8 +43,8 @@ export class TextProcessor {
     }
   }
 
-  private static async parsePDF(arrayBuffer: ArrayBuffer): Promise<string> {
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  private static async extractTextFromPDF(pdfData: ArrayBuffer): Promise<string> {
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
     let text = '';
     
     for (let i = 1; i <= pdf.numPages; i++) {
