@@ -37,7 +37,7 @@ export const ChatInterface = () => {
     setSuggestedQuestions(preguntasAleatorias);
   };
 
-  const speak = (text: string) => {
+  const speak = async (text: string) => {
     if (!isSpeechEnabled) return;
     
     // Cancelar cualquier lectura anterior
@@ -45,8 +45,24 @@ export const ChatInterface = () => {
     
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-MX';
-    utterance.rate = 1;
-    utterance.pitch = 1;
+    
+    // Obtener todas las voces disponibles
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Buscar una voz en español
+    const spanishVoice = voices.find(voice => 
+      voice.lang.startsWith('es') && voice.localService
+    );
+    
+    if (spanishVoice) {
+      utterance.voice = spanishVoice;
+    }
+    
+    // Ajustar parámetros para una voz más natural
+    utterance.rate = 0.9; // Velocidad ligeramente más lenta
+    utterance.pitch = 1.1; // Tono ligeramente más alto
+    utterance.volume = 1.0; // Volumen máximo
+    
     window.speechSynthesis.speak(utterance);
   };
 
@@ -74,7 +90,6 @@ export const ChatInterface = () => {
       setIsTyping(false);
       actualizarPreguntasSugeridas();
       
-      // Leer la respuesta del bot si está habilitado
       if (isSpeechEnabled) {
         speak(respuesta);
       }
