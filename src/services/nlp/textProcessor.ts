@@ -30,8 +30,21 @@ export class TextProcessor {
       // Initialize PDF.js worker
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
       
-      // Initialize the pipeline
-      this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased') as CustomPipeline;
+      // Initialize the pipeline with a lighter model
+      this.questionAnsweringPipeline = await pipeline(
+        'question-answering',
+        'Xenova/distilbert-base-multilingual-cased',
+        {
+          progress_callback: (progress: any) => {
+            console.log(`Loading model: ${Math.round(progress.progress * 100)}%`);
+            if (progress.progress < 1) {
+              toast.loading(`Cargando modelo de IA: ${Math.round(progress.progress * 100)}%`);
+            } else {
+              toast.dismiss();
+            }
+          }
+        }
+      ) as CustomPipeline;
       
       // Start scraping
       console.log('Starting web scraping...');
@@ -161,7 +174,8 @@ export class TextProcessor {
       // Get answer using the pipeline
       const result = await this.questionAnsweringPipeline({
         question: this.normalizeQuestion(question),
-        context: context
+        context: context,
+        max_answer_length: 200
       });
 
       let response = result.answer;
