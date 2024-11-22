@@ -1,42 +1,35 @@
-import natural from 'natural';
 import { Pipeline, pipeline } from '@xenova/transformers';
 import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
 
-const tokenizer = new natural.WordTokenizer();
-const TfIdf = natural.TfIdf;
-let questionAnsweringPipeline: Pipeline;
-
 interface ProcessedContent {
   url: string;
   title: string;
-  tokens: string[];
+  content: string;
   relevanceScore: number;
 }
 
 export class TextProcessor {
-  private static tfidf = new TfIdf();
   private static processedPages: ProcessedContent[] = [];
   private static initialized = false;
+  private static questionAnsweringPipeline: any;
 
   static async initialize() {
     if (this.initialized) return;
 
     try {
       // Inicializar el modelo de question-answering
-      questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased');
+      this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased');
       
       // Obtener y procesar el contenido
       const pages = await scraper.scrapeAll();
       pages.forEach((page, url) => {
-        const tokens = tokenizer.tokenize(page.content.toLowerCase());
         this.processedPages.push({
           url,
           title: page.title,
-          tokens,
+          content: page.content.toLowerCase(),
           relevanceScore: 0
         });
-        this.tfidf.addDocument(tokens);
       });
 
       this.initialized = true;
@@ -49,14 +42,15 @@ export class TextProcessor {
   static async processQuestion(question: string): Promise<string> {
     await this.initialize();
 
-    // Tokenizar la pregunta
-    const questionTokens = tokenizer.tokenize(question.toLowerCase());
+    // Calcular relevancia usando coincidencia de palabras clave
+    const questionWords = question.toLowerCase().split(/\s+/);
     
-    // Calcular relevancia de cada documento
-    this.processedPages.forEach((page, index) => {
+    this.processedPages.forEach(page => {
       let score = 0;
-      questionTokens.forEach(token => {
-        score += this.tfidf.tfidf(token, index);
+      questionWords.forEach(word => {
+        if (page.content.includes(word)) {
+          score += 1;
+        }
       });
       page.relevanceScore = score;
     });
@@ -72,8 +66,8 @@ export class TextProcessor {
 
     // Usar el modelo de question-answering para obtener la respuesta
     try {
-      const context = relevantPages.map(page => page.title + ": " + page.tokens.join(" ")).join("\n\n");
-      const result = await questionAnsweringPipeline({
+      const context = relevantPages.map(page => `${page.title}: ${page.content}`).join("\n\n");
+      const result = await this.questionAnsweringPipeline({
         question,
         context
       });
