@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { load } from 'cheerio';
 import * as pdfjsLib from 'pdfjs-dist';
-import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
+import { UPIICSA_BASE_URL, CORS_PROXY, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ class UPIICSAScraper {
   private results: Map<string, ScrapedPage> = new Map();
 
   constructor() {
-    this.queue.push(UPIICSA_BASE_URL);
+    this.queue.push(CORS_PROXY);
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }
 
@@ -32,9 +32,10 @@ class UPIICSAScraper {
         return `https:${url}`;
       }
       if (url.startsWith('/')) {
-        return new URL(url, baseUrl).href;
+        const baseUrlObj = new URL(UPIICSA_BASE_URL);
+        return new URL(url, baseUrlObj.origin).href;
       }
-      return new URL(url, baseUrl).href;
+      return new URL(url, UPIICSA_BASE_URL).href;
     } catch {
       return url;
     }
@@ -62,9 +63,16 @@ class UPIICSAScraper {
     try {
       console.log(`Scraping: ${url}`);
       
-      const response = await axios.get(url, {
+      const proxyUrl = url === CORS_PROXY ? url : 'https://corsproxy.io/?' + encodeURIComponent(url);
+      
+      const response = await axios.get(proxyUrl, {
         responseType: url.toLowerCase().endsWith('.pdf') ? 'arraybuffer' : 'text',
-        timeout: 10000
+        timeout: 10000,
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'es-MX,es;q=0.8,en-US;q=0.5,en;q=0.3',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
       });
       
       if (url.toLowerCase().endsWith('.pdf')) {
@@ -167,7 +175,7 @@ class UPIICSAScraper {
   public clearResults(): void {
     this.results.clear();
     this.visitedUrls.clear();
-    this.queue = [UPIICSA_BASE_URL];
+    this.queue = [CORS_PROXY];
   }
 }
 
