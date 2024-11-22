@@ -1,6 +1,7 @@
 import { Pipeline, pipeline } from '@xenova/transformers';
 import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface ProcessedContent {
   url: string;
@@ -18,10 +19,13 @@ export class TextProcessor {
     if (this.initialized) return;
 
     try {
-      // Inicializar el modelo de question-answering
+      // Initialize PDF.js worker
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      
+      // Initialize question-answering model
       this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased');
       
-      // Obtener y procesar el contenido
+      // Get and process content
       const pages = await scraper.scrapeAll();
       pages.forEach((page, url) => {
         this.processedPages.push({
@@ -39,10 +43,23 @@ export class TextProcessor {
     }
   }
 
+  private static async parsePDF(arrayBuffer: ArrayBuffer): Promise<string> {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(' ') + '\n';
+    }
+    
+    return text;
+  }
+
   static async processQuestion(question: string): Promise<string> {
     await this.initialize();
 
-    // Calcular relevancia usando coincidencia de palabras clave
+    // Calculate relevance using keyword matching
     const questionWords = question.toLowerCase().split(/\s+/);
     
     this.processedPages.forEach(page => {
@@ -55,7 +72,7 @@ export class TextProcessor {
       page.relevanceScore = score;
     });
 
-    // Ordenar por relevancia y tomar los más relevantes
+    // Sort by relevance and take most relevant
     const relevantPages = [...this.processedPages]
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, 3);
@@ -64,7 +81,7 @@ export class TextProcessor {
       return "Lo siento, no encontré información relevante sobre tu pregunta. ¿Podrías reformularla?";
     }
 
-    // Usar el modelo de question-answering para obtener la respuesta
+    // Use question-answering model to get the answer
     try {
       const context = relevantPages.map(page => `${page.title}: ${page.content}`).join("\n\n");
       const result = await this.questionAnsweringPipeline({
@@ -74,7 +91,7 @@ export class TextProcessor {
 
       let response = result.answer;
       
-      // Agregar fuentes de información
+      // Add information sources
       response += "\n\nPuedes encontrar más información en:";
       relevantPages.forEach(page => {
         response += `\n- <a href="${page.url}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 underline">${page.title}</a>`;
