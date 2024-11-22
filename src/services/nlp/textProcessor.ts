@@ -13,25 +13,22 @@ interface ProcessedContent {
 export class TextProcessor {
   private static processedPages: ProcessedContent[] = [];
   private static initialized = false;
-  private static questionAnsweringPipeline: any;
+  private static questionAnsweringPipeline: Pipeline;
 
   static async initialize() {
     if (this.initialized) return;
 
     try {
-      // Initialize PDF.js worker
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
       
-      // Initialize question-answering model
       this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased');
       
-      // Get and process content
       const pages = await scraper.scrapeAll();
       pages.forEach((page, url) => {
         this.processedPages.push({
           url,
           title: page.title,
-          content: page.content.toLowerCase(),
+          content: this.cleanContent(page.content),
           relevanceScore: 0
         });
       });
@@ -43,47 +40,61 @@ export class TextProcessor {
     }
   }
 
-  private static async extractTextFromPDF(pdfData: ArrayBuffer): Promise<string> {
-    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-    let text = '';
+  private static cleanContent(content: string): string {
+    return content
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private static calculateRelevance(question: string, content: string): number {
+    const questionWords = question.toLowerCase().split(/\s+/);
+    const contentWords = new Set(content.toLowerCase().split(/\s+/));
     
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items.map((item: any) => item.str).join(' ') + '\n';
-    }
+    let score = 0;
+    questionWords.forEach(word => {
+      if (contentWords.has(word)) score += 1;
+      if (content.includes(word)) score += 0.5;
+    });
     
-    return text;
+    // Bonus points for specific topics
+    const topics = {
+      'servicio social': 2,
+      'electivas': 2,
+      'materias optativas': 2,
+      'tramites': 1.5,
+      'requisitos': 1.5
+    };
+
+    Object.entries(topics).forEach(([topic, points]) => {
+      if (content.includes(topic)) score += points;
+    });
+
+    return score;
   }
 
   static async processQuestion(question: string): Promise<string> {
     await this.initialize();
 
-    // Calculate relevance using keyword matching
-    const questionWords = question.toLowerCase().split(/\s+/);
-    
+    // Calculate relevance for each page
     this.processedPages.forEach(page => {
-      let score = 0;
-      questionWords.forEach(word => {
-        if (page.content.includes(word)) {
-          score += 1;
-        }
-      });
-      page.relevanceScore = score;
+      page.relevanceScore = this.calculateRelevance(question, page.content);
     });
 
-    // Sort by relevance and take most relevant
+    // Get most relevant pages
     const relevantPages = [...this.processedPages]
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, 3);
 
-    if (relevantPages.length === 0) {
-      return "Lo siento, no encontré información relevante sobre tu pregunta. ¿Podrías reformularla?";
+    if (relevantPages.length === 0 || relevantPages[0].relevanceScore < 1) {
+      return "Lo siento, no encontré información relevante sobre tu pregunta en el sitio de UPIICSA. ¿Podrías reformularla o ser más específico?";
     }
 
-    // Use question-answering model to get the answer
     try {
-      const context = relevantPages.map(page => `${page.title}: ${page.content}`).join("\n\n");
+      const context = relevantPages
+        .map(page => `${page.title}: ${page.content}`)
+        .join("\n\n");
+
       const result = await this.questionAnsweringPipeline({
         question,
         context
@@ -91,8 +102,8 @@ export class TextProcessor {
 
       let response = result.answer;
       
-      // Add information sources
-      response += "\n\nPuedes encontrar más información en:";
+      // Add sources
+      response += "\n\nFuentes consultadas:";
       relevantPages.forEach(page => {
         response += `\n- <a href="${page.url}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 underline">${page.title}</a>`;
       });
@@ -100,7 +111,7 @@ export class TextProcessor {
       return response;
     } catch (error) {
       console.error('Error processing question:', error);
-      return "Lo siento, hubo un error al procesar tu pregunta. ¿Podrías intentarlo de nuevo?";
+      return "Disculpa, hubo un error al procesar tu pregunta. Por favor, intenta reformularla.";
     }
   }
 }

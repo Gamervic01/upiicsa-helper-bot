@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { scraper } from '../services/scraper/scraper';
 import { useScraperStore } from '../services/scraper/store';
+import { toast } from 'sonner';
 
 export const useScraper = () => {
   const { setPages, setLoading, setError } = useScraperStore();
@@ -11,8 +12,11 @@ export const useScraper = () => {
       setError(null);
       const results = await scraper.scrapeAll();
       setPages(results);
+      toast.success('Base de conocimiento actualizada');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error durante el scraping');
+      const errorMessage = error instanceof Error ? error.message : 'Error durante el scraping';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

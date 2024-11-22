@@ -15,13 +15,17 @@ export const SCRAPING_RULES = {
     /tel:/
   ],
   includePatterns: [
-    /^https?:\/\/(www\.)?upiicsa\.ipn\.mx/
+    /^https?:\/\/(www\.)?upiicsa\.ipn\.mx/,
+    /servicio-social/,
+    /estudiantes/,
+    /electivas/,
+    /academica/
   ]
 };
 
 export const SELECTORS = {
   title: 'title',
-  content: 'p, h1, h2, h3, h4, h5, h6, li',
+  content: 'p, h1, h2, h3, h4, h5, h6, li, .content, .main-content, article',
   links: 'a',
   menu: 'nav a, .menu a, .navbar a'
 };
