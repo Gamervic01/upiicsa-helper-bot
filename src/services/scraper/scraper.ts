@@ -1,5 +1,3 @@
-import puppeteer from 'puppeteer';
-import * as pdfjsLib from 'pdfjs-dist';
 import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
 import { toast } from 'sonner';
@@ -8,11 +6,9 @@ class UPIICSAScraper {
   private visitedUrls: Set<string> = new Set();
   private queue: string[] = [];
   private results: Map<string, ScrapedPage> = new Map();
-  private browser: puppeteer.Browser | null = null;
 
   constructor() {
     this.queue.push(UPIICSA_BASE_URL);
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }
 
   private isAllowedUrl(url: string): boolean {
@@ -40,70 +36,42 @@ class UPIICSAScraper {
     }
   }
 
-  private async extractTextFromPDF(pdfData: ArrayBuffer): Promise<string> {
-    try {
-      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-      let text = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((item: any) => item.str).join(' ') + '\n';
-      }
-      
-      return text;
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      return '';
-    }
-  }
-
   private async scrapePage(url: string): Promise<ScrapingResult> {
     try {
       console.log(`Scraping: ${url}`);
 
-      if (!this.browser) {
-        this.browser = await puppeteer.launch({
-          headless: 'new',
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
 
-      const page = await this.browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      try {
-        await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-      } catch (error) {
-        console.error(`Error navigating to ${url}:`, error);
-        await page.close();
-        return { success: false, error: 'Error accessing page' };
-      }
+      const data = await response.json();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data.contents, 'text/html');
 
       // Extract content
-      const content = await page.evaluate((selectors) => {
-        const elements = document.querySelectorAll(selectors.content);
-        return Array.from(elements).map(el => el.textContent).join('\n');
-      }, SELECTORS);
+      const contentElements = doc.querySelectorAll(SELECTORS.content);
+      const content = Array.from(contentElements)
+        .map(el => el.textContent)
+        .join('\n');
 
       // Extract links
-      const links: ScrapedLink[] = await page.evaluate((selectors) => {
-        const linkElements = document.querySelectorAll(selectors.links);
-        return Array.from(linkElements).map(el => ({
-          url: el.getAttribute('href') || '',
+      const linkElements = doc.querySelectorAll(SELECTORS.links);
+      const links: ScrapedLink[] = Array.from(linkElements)
+        .map(el => ({
+          url: (el as HTMLAnchorElement).href || '',
           text: el.textContent || '',
           type: 'internal'
-        }));
-      }, SELECTORS);
+        }))
+        .filter(link => link.url);
 
-      const title = await page.title();
-      await page.close();
+      const title = doc.title || url;
 
       const scrapedPage: ScrapedPage = {
         url,
-        title: title || url,
+        title,
         content: content || '',
-        links: links.filter(link => link.url),
+        links,
         lastScraped: new Date()
       };
 
@@ -145,11 +113,6 @@ class UPIICSAScraper {
           // Add delay to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      }
-
-      if (this.browser) {
-        await this.browser.close();
-        this.browser = null;
       }
 
       console.log(`Scraping completed. Processed ${processedCount} pages.`);
