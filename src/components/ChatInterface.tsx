@@ -3,7 +3,6 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { shuffle } from "lodash";
-import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
 import { procesarRespuesta, prepareTextForSpeech } from "../utils/messageProcessor";
 import { Switch } from "./ui/switch";
 import { Volume2, VolumeX } from "lucide-react";
@@ -14,6 +13,16 @@ interface Message {
   isBot: boolean;
   timestamp: Date;
 }
+
+// Common questions that might be useful for users
+const COMMON_QUESTIONS = [
+  "¿Cómo libero mi servicio social?",
+  "¿Cuál es el proceso para prácticas profesionales?",
+  "¿Qué electivas puedo tomar?",
+  "¿Dónde encuentro la malla curricular?",
+  "¿Cuáles son los requisitos de titulación?",
+  "¿Cómo solicito una constancia de estudios?"
+];
 
 export const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -46,8 +55,7 @@ export const ChatInterface = () => {
   }, [messages]);
 
   const actualizarPreguntasSugeridas = () => {
-    const todasLasPreguntas = Object.keys(TODAS_LAS_PREGUNTAS);
-    const preguntasAleatorias = shuffle(todasLasPreguntas).slice(0, 6);
+    const preguntasAleatorias = shuffle(COMMON_QUESTIONS).slice(0, 6);
     setSuggestedQuestions(preguntasAleatorias);
   };
 
