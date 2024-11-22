@@ -10,10 +10,14 @@ interface ProcessedContent {
   relevanceScore: number;
 }
 
+type CustomPipeline = Pipeline & {
+  processor?: any;
+};
+
 export class TextProcessor {
   private static processedPages: ProcessedContent[] = [];
   private static initialized = false;
-  private static questionAnsweringPipeline: Pipeline;
+  private static questionAnsweringPipeline: CustomPipeline;
 
   static async initialize() {
     if (this.initialized) return;
@@ -21,7 +25,7 @@ export class TextProcessor {
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
       
-      this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased');
+      this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased') as CustomPipeline;
       
       const pages = await scraper.scrapeAll();
       pages.forEach((page, url) => {
@@ -57,7 +61,6 @@ export class TextProcessor {
       if (content.includes(word)) score += 0.5;
     });
     
-    // Bonus points for specific topics
     const topics = {
       'servicio social': 2,
       'electivas': 2,
@@ -76,12 +79,10 @@ export class TextProcessor {
   static async processQuestion(question: string): Promise<string> {
     await this.initialize();
 
-    // Calculate relevance for each page
     this.processedPages.forEach(page => {
       page.relevanceScore = this.calculateRelevance(question, page.content);
     });
 
-    // Get most relevant pages
     const relevantPages = [...this.processedPages]
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, 3);
@@ -102,7 +103,6 @@ export class TextProcessor {
 
       let response = result.answer;
       
-      // Add sources
       response += "\n\nFuentes consultadas:";
       relevantPages.forEach(page => {
         response += `\n- <a href="${page.url}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 underline">${page.title}</a>`;
