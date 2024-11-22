@@ -165,4 +165,61 @@ export const TODAS_LAS_PREGUNTAS = {
     "- IIA: Ingeniería Industrial y Administrativa\n" +
     "- LA: Licenciatura en Administración\n\n" +
     "¿Te gustaría saber más detalles sobre alguna carrera en específico?",
+  
+  // Nuevas preguntas sobre electivas
+  "¿Cómo encuentro mis electivas?": 
+    "Para encontrar tus materias electivas:\n\n" +
+    "1. Ingresa al SAES (https://www.saes.upiicsa.ipn.mx)\n" +
+    "2. Ve a la sección 'Plan de Estudios'\n" +
+    "3. En el menú lateral, selecciona 'Materias Optativas'\n" +
+    "4. Ahí encontrarás la lista de electivas disponibles para tu carrera\n\n" +
+    "También puedes consultar con tu coordinador de carrera para conocer qué electivas se ofertarán el próximo semestre.",
+
+  "¿Qué electivas puedo tomar?":
+    "Las electivas que puedes tomar dependen de:\n\n" +
+    "1. Tu carrera y especialidad\n" +
+    "2. Los créditos que ya hayas cursado\n" +
+    "3. Los prerequisitos cumplidos\n\n" +
+    "Para ver las electivas específicas disponibles:\n" +
+    "- Consulta el SAES en la sección de materias optativas\n" +
+    "- Visita a tu coordinador de carrera\n" +
+    "- Revisa el mapa curricular de tu carrera",
+
+  // Nuevas preguntas sobre servicio social
+  "¿Cómo veo mi servicio social?":
+    "Para consultar el estado de tu servicio social:\n\n" +
+    "1. Ingresa al SISS (Sistema Institucional de Servicio Social)\n" +
+    "2. Usa tu número de boleta y contraseña\n" +
+    "3. En el menú principal encontrarás:\n" +
+    "   - Estado actual de tu servicio\n" +
+    "   - Horas acumuladas\n" +
+    "   - Reportes pendientes\n\n" +
+    "También puedes acudir al Departamento de Servicio Social en el edificio de gobierno.",
+
+  "¿Cómo libero mi servicio social?":
+    "Para liberar tu servicio social necesitas:\n\n" +
+    "1. Haber cubierto el 70% de créditos de tu carrera\n" +
+    "2. Cumplir 480 horas en 6 meses mínimo\n" +
+    "3. Entregar reportes mensuales\n" +
+    "4. Documentos necesarios:\n" +
+    "   - Carta de término\n" +
+    "   - Evaluación del prestador\n" +
+    "   - Reporte final\n" +
+    "   - Formato de liberación\n\n" +
+    "Visita el Departamento de Servicio Social para más información.",
+
+  "¿Cuál es el proceso para liberar el servicio social?":
+    "El proceso de liberación del servicio social es:\n\n" +
+    "1. Registro inicial:\n" +
+    "   - Seleccionar institución\n" +
+    "   - Llenar formatos\n" +
+    "   - Obtener carta de aceptación\n\n" +
+    "2. Durante el servicio:\n" +
+    "   - Cumplir 480 horas (6 meses mínimo)\n" +
+    "   - Entregar reportes mensuales\n\n" +
+    "3. Liberación:\n" +
+    "   - Entregar carta de término\n" +
+    "   - Presentar evaluaciones\n" +
+    "   - Entregar reporte final\n\n" +
+    "Para más detalles, visita: <a href='https://www.upiicsa.ipn.mx/estudiantes/servicio-social.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Portal de Servicio Social</a>",
 };
