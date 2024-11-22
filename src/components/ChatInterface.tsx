@@ -4,7 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { shuffle } from "lodash";
 import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
-import { procesarRespuesta } from "../utils/messageProcessor";
+import { procesarRespuesta, prepareTextForSpeech } from "../utils/messageProcessor";
 import { Switch } from "./ui/switch";
 import { Volume2, VolumeX } from "lucide-react";
 
@@ -43,7 +43,10 @@ export const ChatInterface = () => {
     // Cancelar cualquier lectura anterior
     window.speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Preparar el texto para una lectura más natural
+    const processedText = prepareTextForSpeech(text);
+    
+    const utterance = new SpeechSynthesisUtterance(processedText);
     utterance.lang = 'es-MX';
     
     // Obtener todas las voces disponibles

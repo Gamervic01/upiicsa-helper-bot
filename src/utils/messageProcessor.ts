@@ -16,6 +16,18 @@ const normalizeText = (text: string): string => {
     .trim();
 };
 
+const prepareTextForSpeech = (text: string): string => {
+  // Reemplazar URLs con un mensaje más natural
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const textWithoutUrls = text.replace(urlRegex, 'Te invito a revisar el enlace que te comparto.');
+  
+  // Reemplazar emojis con espacios para que no intente leerlos
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]/gu;
+  const textWithoutEmojis = textWithoutUrls.replace(emojiRegex, '');
+  
+  return textWithoutEmojis;
+};
+
 const findBestMatch = (userInput: string, possibleMatches: string[]): string | null => {
   const normalizedInput = normalizeText(userInput);
   const normalizedMatches = possibleMatches.map(normalizeText);
@@ -146,3 +158,5 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
   
   return respuestasDefault[Math.floor(Math.random() * respuestasDefault.length)];
 };
+
+export { prepareTextForSpeech };
