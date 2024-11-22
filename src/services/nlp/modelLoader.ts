@@ -20,12 +20,8 @@ export const loadModel = async (): Promise<CustomPipeline> => {
             toast.dismiss();
           }
         },
-        remote: true,
-        cache_dir: '/models',
-        config: {
-          use_cdn: true,
-          base_url: 'https://cdn.huggingface.co',
-        }
+        quantized: false,
+        revision: 'main'
       }
     ) as CustomPipeline;
   } catch (error) {
