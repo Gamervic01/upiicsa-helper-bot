@@ -40,56 +40,64 @@ class UPIICSAScraper {
     try {
       console.log(`Scraping: ${url}`);
 
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+      // Contenido estático de ejemplo para desarrollo
+      const staticContent = {
+        "servicio-social": {
+          title: "Servicio Social UPIICSA",
+          content: `El servicio social es una actividad obligatoria que deben realizar los estudiantes de UPIICSA. 
+                   Requisitos principales:
+                   - Tener el 70% de créditos aprobados
+                   - Cubrir 480 horas en un período mínimo de 6 meses
+                   - Realizar el registro en el SISS
+                   Para más información, acude al Departamento de Servicio Social.`
+        },
+        "practicas-profesionales": {
+          title: "Prácticas Profesionales",
+          content: `Las prácticas profesionales son una oportunidad para adquirir experiencia laboral.
+                   Requisitos:
+                   - Ser alumno regular
+                   - Tener el 70% de créditos
+                   - Registrar tu práctica en el departamento correspondiente
+                   Duración mínima: 240 horas.`
+        },
+        "titulacion": {
+          title: "Opciones de Titulación",
+          content: `UPIICSA ofrece diferentes opciones de titulación:
+                   1. Tesis
+                   2. Seminario
+                   3. Escolaridad
+                   4. Experiencia Profesional
+                   5. Curricular
+                   6. Proyecto de Investigación
+                   Consulta los requisitos específicos en la Unidad de Titulación.`
+        }
+      };
 
-      const data = await response.json();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(data.contents, 'text/html');
-
-      // Extract content
-      const contentElements = doc.querySelectorAll(SELECTORS.content);
-      const content = Array.from(contentElements)
-        .map(el => el.textContent)
-        .join('\n');
-
-      // Extract links
-      const linkElements = doc.querySelectorAll(SELECTORS.links);
-      const links: ScrapedLink[] = Array.from(linkElements)
-        .map(el => {
-          const href = (el as HTMLAnchorElement).href || '';
-          const normalizedUrl = this.normalizeUrl(href);
-          return {
-            url: normalizedUrl,
-            text: el.textContent || '',
-            type: this.isAllowedUrl(normalizedUrl) ? 'internal' : 
-                  href.toLowerCase().endsWith('.pdf') ? 'pdf' : 
-                  'external'
-          } as ScrapedLink;
-        })
-        .filter(link => link.url);
-
-      const title = doc.title || url;
+      // Simular el contenido basado en la URL
+      const urlPath = url.split('/').pop() || '';
+      const pageContent = staticContent[urlPath as keyof typeof staticContent] || {
+        title: "UPIICSA - IPN",
+        content: `La Unidad Profesional Interdisciplinaria de Ingeniería y Ciencias Sociales y Administrativas (UPIICSA) 
+                 es una unidad académica del Instituto Politécnico Nacional (IPN).
+                 Ofrecemos las siguientes carreras:
+                 - Ingeniería en Informática
+                 - Ingeniería Industrial
+                 - Ingeniería en Transporte
+                 - Ingeniería en Sistemas Automotrices
+                 - Administración Industrial
+                 Para más información, visita nuestras instalaciones o contacta a control escolar.`
+      };
 
       const scrapedPage: ScrapedPage = {
         url,
-        title,
-        content: content || '',
-        links,
+        title: pageContent.title,
+        content: pageContent.content,
+        links: [],
         lastScraped: new Date()
       };
 
       this.results.set(url, scrapedPage);
       this.visitedUrls.add(url);
-
-      // Add new URLs to queue
-      links
-        .filter(link => link.type === 'internal')
-        .map(link => this.normalizeUrl(link.url))
-        .filter(url => this.isAllowedUrl(url) && !this.visitedUrls.has(url))
-        .forEach(url => this.queue.push(url));
 
       return { success: true, data: scrapedPage };
     } catch (error) {
@@ -107,18 +115,17 @@ class UPIICSAScraper {
       let processedCount = 0;
       const maxPages = SCRAPING_RULES.maxDepth * 10;
 
-      while (this.queue.length > 0 && this.visitedUrls.size < maxPages) {
-        const url = this.queue.shift();
-        if (url && !this.visitedUrls.has(url)) {
+      // Procesar páginas principales
+      const mainPages = [
+        `${UPIICSA_BASE_URL}/servicio-social`,
+        `${UPIICSA_BASE_URL}/practicas-profesionales`,
+        `${UPIICSA_BASE_URL}/titulacion`
+      ];
+
+      for (const url of mainPages) {
+        if (!this.visitedUrls.has(url)) {
           await this.scrapePage(url);
           processedCount++;
-          
-          if (processedCount % 5 === 0) {
-            console.log(`Processed ${processedCount} pages. Queue size: ${this.queue.length}`);
-          }
-          
-          // Add delay to avoid overwhelming the server
-          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
