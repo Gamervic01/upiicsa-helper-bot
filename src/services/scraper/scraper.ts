@@ -3,6 +3,7 @@ import { load } from 'cheerio';
 import * as pdfjsLib from 'pdfjs-dist';
 import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
+import { toast } from 'sonner';
 
 class UPIICSAScraper {
   private visitedUrls: Set<string> = new Set();
@@ -11,7 +12,6 @@ class UPIICSAScraper {
 
   constructor() {
     this.queue.push(UPIICSA_BASE_URL);
-    // Initialize PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }
 
@@ -40,13 +40,6 @@ class UPIICSAScraper {
     }
   }
 
-  private getLinkType(url: string): 'internal' | 'external' | 'pdf' {
-    if (url.toLowerCase().endsWith('.pdf')) {
-      return 'pdf';
-    }
-    return this.isAllowedUrl(url) ? 'internal' : 'external';
-  }
-
   private async extractTextFromPDF(pdfData: ArrayBuffer): Promise<string> {
     try {
       const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
@@ -67,8 +60,11 @@ class UPIICSAScraper {
 
   private async scrapePage(url: string): Promise<ScrapingResult> {
     try {
+      console.log(`Scraping: ${url}`);
+      
       const response = await axios.get(url, {
-        responseType: url.toLowerCase().endsWith('.pdf') ? 'arraybuffer' : 'text'
+        responseType: url.toLowerCase().endsWith('.pdf') ? 'arraybuffer' : 'text',
+        timeout: 10000
       });
       
       if (url.toLowerCase().endsWith('.pdf')) {
@@ -85,10 +81,7 @@ class UPIICSAScraper {
         this.results.set(url, scrapedPage);
         this.visitedUrls.add(url);
         
-        return {
-          success: true,
-          data: scrapedPage
-        };
+        return { success: true, data: scrapedPage };
       }
 
       const $ = load(response.data);
@@ -99,14 +92,13 @@ class UPIICSAScraper {
         const href = link.attr('href');
         if (href) {
           const normalizedUrl = this.normalizeUrl(href, url);
-          links.push({
-            url: normalizedUrl,
-            text: link.text().trim(),
-            type: this.getLinkType(normalizedUrl)
-          });
-
           if (this.isAllowedUrl(normalizedUrl) && !this.visitedUrls.has(normalizedUrl)) {
             this.queue.push(normalizedUrl);
+            links.push({
+              url: normalizedUrl,
+              text: link.text().trim(),
+              type: 'internal'
+            });
           }
         }
       });
@@ -119,7 +111,7 @@ class UPIICSAScraper {
 
       const scrapedPage: ScrapedPage = {
         url,
-        title: $(SELECTORS.title).text().trim(),
+        title: $(SELECTORS.title).text().trim() || url.split('/').pop() || url,
         content,
         links,
         lastScraped: new Date()
@@ -128,11 +120,9 @@ class UPIICSAScraper {
       this.results.set(url, scrapedPage);
       this.visitedUrls.add(url);
 
-      return {
-        success: true,
-        data: scrapedPage
-      };
+      return { success: true, data: scrapedPage };
     } catch (error) {
+      console.error(`Error scraping ${url}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Error durante el scraping'
@@ -141,16 +131,33 @@ class UPIICSAScraper {
   }
 
   public async scrapeAll(): Promise<Map<string, ScrapedPage>> {
-    while (this.queue.length > 0 && this.visitedUrls.size < SCRAPING_RULES.maxDepth * 10) {
-      const url = this.queue.shift();
-      if (url && !this.visitedUrls.has(url)) {
-        console.log(`Scraping: ${url}`);
-        await this.scrapePage(url);
-        // Añadir un pequeño delay para no sobrecargar el servidor
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      console.log('Starting scraping process...');
+      let processedCount = 0;
+      const maxPages = SCRAPING_RULES.maxDepth * 10;
+
+      while (this.queue.length > 0 && this.visitedUrls.size < maxPages) {
+        const url = this.queue.shift();
+        if (url && !this.visitedUrls.has(url)) {
+          await this.scrapePage(url);
+          processedCount++;
+          
+          if (processedCount % 5 === 0) {
+            console.log(`Processed ${processedCount} pages. Queue size: ${this.queue.length}`);
+          }
+          
+          // Add delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
+
+      console.log(`Scraping completed. Processed ${processedCount} pages.`);
+      return this.results;
+    } catch (error) {
+      console.error('Error in scrapeAll:', error);
+      toast.error('Error al obtener información del sitio web');
+      throw error;
     }
-    return this.results;
   }
 
   public getResults(): Map<string, ScrapedPage> {

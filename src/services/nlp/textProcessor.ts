@@ -3,6 +3,7 @@ import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
 import * as pdfjsLib from 'pdfjs-dist';
 import stringSimilarity from 'string-similarity';
+import { toast } from 'sonner';
 
 interface ProcessedContent {
   url: string;
@@ -24,23 +25,38 @@ export class TextProcessor {
     if (this.initialized) return;
 
     try {
+      console.log('Initializing TextProcessor...');
+      
+      // Initialize PDF.js worker
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
       
+      // Initialize the pipeline
       this.questionAnsweringPipeline = await pipeline('question-answering', 'Xenova/bert-base-multilingual-cased') as CustomPipeline;
       
+      // Start scraping
+      console.log('Starting web scraping...');
       const pages = await scraper.scrapeAll();
+      
+      if (!pages || pages.size === 0) {
+        throw new Error('No se pudo obtener contenido del sitio web');
+      }
+
+      // Process pages
       pages.forEach((page, url) => {
         this.processedPages.push({
           url,
-          title: page.title,
-          content: this.cleanContent(page.content),
+          title: page.title || url,
+          content: this.cleanContent(page.content || ''),
           relevanceScore: 0
         });
       });
 
+      console.log(`Processed ${this.processedPages.length} pages successfully`);
       this.initialized = true;
+      toast.success('Sistema inicializado correctamente');
     } catch (error) {
       console.error('Error initializing TextProcessor:', error);
+      toast.error('Error al inicializar el sistema de procesamiento');
       throw error;
     }
   }
@@ -56,17 +72,21 @@ export class TextProcessor {
 
   private static normalizeQuestion(question: string): string {
     const keywords: { [key: string]: string[] } = {
-      'servicio social': ['servicio', 'social', 'ss'],
-      'practicas profesionales': ['practicas', 'profesionales', 'pp'],
-      'electivas': ['electivas', 'optativas', 'materias optativas'],
-      'malla curricular': ['malla', 'curricular', 'plan de estudios', 'materias'],
-      'tramites': ['tramite', 'tramites', 'proceso', 'requisitos'],
-      'liberacion': ['liberar', 'liberacion', 'libero', 'acreditar']
+      'servicio social': ['servicio', 'social', 'ss', 'servicio_social'],
+      'practicas profesionales': ['practicas', 'profesionales', 'pp', 'practicas_profesionales'],
+      'electivas': ['electivas', 'optativas', 'materias optativas', 'materias_optativas'],
+      'malla curricular': ['malla', 'curricular', 'plan de estudios', 'materias', 'plan_de_estudios'],
+      'tramites': ['tramite', 'tramites', 'proceso', 'requisitos', 'documentos'],
+      'liberacion': ['liberar', 'liberacion', 'libero', 'acreditar', 'terminar'],
+      'informatica': ['informatica', 'sistemas', 'computacion', 'software'],
+      'industrial': ['industrial', 'industrias', 'manufactura'],
+      'transporte': ['transporte', 'transportes', 'logistica'],
+      'metalurgia': ['metalurgia', 'metales', 'metalurgica'],
+      'energia': ['energia', 'energias', 'energetica']
     };
 
     let normalizedQuestion = question.toLowerCase();
     
-    // Reemplazar sinónimos y variaciones
     Object.entries(keywords).forEach(([key, synonyms]) => {
       synonyms.forEach(synonym => {
         const regex = new RegExp(`\\b${synonym}\\b`, 'gi');
@@ -77,95 +97,91 @@ export class TextProcessor {
     return normalizedQuestion;
   }
 
-  private static calculateRelevance(question: string, content: string): number {
+  private static calculateRelevance(question: string, content: ProcessedContent): number {
     const normalizedQuestion = this.normalizeQuestion(question);
-    const normalizedContent = this.cleanContent(content);
+    const normalizedContent = this.cleanContent(content.content);
     
-    // Calcular similitud base usando string-similarity
+    let score = 0;
+    
+    // Base similarity score
     const similarity = stringSimilarity.compareTwoStrings(normalizedQuestion, normalizedContent);
-    let score = similarity * 5; // Base score
+    score += similarity * 5;
     
-    // Identificar palabras clave importantes
-    const keywords = {
-      'servicio social': 3,
-      'practicas profesionales': 3,
-      'electivas': 3,
-      'malla curricular': 2.5,
-      'tramites': 2,
-      'liberacion': 2.5,
-      'requisitos': 2,
-      'proceso': 1.5,
-      'informatica': 2,
-      'sistemas': 2,
-      'industrial': 2,
-      'administracion': 2,
-      'mecanica': 2
-    };
-
-    // Aumentar score basado en palabras clave encontradas
-    Object.entries(keywords).forEach(([keyword, points]) => {
-      if (normalizedContent.includes(keyword)) {
-        score += points;
-      }
-      if (normalizedQuestion.includes(keyword)) {
-        score += points * 0.5; // Bonus por coincidencia en la pregunta
+    // URL relevance
+    const urlKeywords = normalizedQuestion.split(' ');
+    urlKeywords.forEach(keyword => {
+      if (content.url.toLowerCase().includes(keyword)) {
+        score += 2;
       }
     });
-
-    // Bonus por coincidencia de frases completas
-    const phrases = normalizedQuestion.match(/"([^"]*)"|\b\w+\s+\w+\s+\w+\b|\b\w+\s+\w+\b|\b\w+\b/g) || [];
-    phrases.forEach(phrase => {
-      if (normalizedContent.includes(phrase)) {
-        score += phrase.split(' ').length; // Más palabras = más puntos
-      }
-    });
-
+    
+    // Title relevance
+    const titleSimilarity = stringSimilarity.compareTwoStrings(normalizedQuestion, content.title.toLowerCase());
+    score += titleSimilarity * 3;
+    
+    // Content length penalty (to avoid very short responses)
+    if (content.content.length < 100) {
+      score *= 0.5;
+    }
+    
     return score;
   }
 
   static async processQuestion(question: string): Promise<string> {
-    await this.initialize();
-
-    const normalizedQuestion = this.normalizeQuestion(question);
-    
-    this.processedPages.forEach(page => {
-      page.relevanceScore = this.calculateRelevance(normalizedQuestion, page.content);
-    });
-
-    const relevantPages = [...this.processedPages]
-      .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 3);
-
-    if (relevantPages.length === 0 || relevantPages[0].relevanceScore < 2) {
-      return "Lo siento, no encontré información específica sobre tu pregunta en el sitio de UPIICSA. ¿Podrías reformularla o ser más específico? Por ejemplo, si preguntas por trámites, especifica cuál trámite te interesa.";
+    if (!this.initialized) {
+      await this.initialize();
     }
 
     try {
+      console.log('Processing question:', question);
+      
+      if (this.processedPages.length === 0) {
+        throw new Error('No hay contenido disponible para procesar la pregunta');
+      }
+
+      // Calculate relevance scores
+      this.processedPages.forEach(page => {
+        page.relevanceScore = this.calculateRelevance(question, page);
+      });
+
+      // Sort by relevance and get top results
+      const relevantPages = [...this.processedPages]
+        .sort((a, b) => b.relevanceScore - a.relevanceScore)
+        .slice(0, 3);
+
+      if (relevantPages[0].relevanceScore < 1) {
+        return "Lo siento, no encontré información específica sobre tu pregunta. ¿Podrías reformularla o ser más específico?";
+      }
+
+      // Prepare context from relevant pages
       const context = relevantPages
         .map(page => `${page.title}: ${page.content}`)
         .join("\n\n");
 
+      // Get answer using the pipeline
       const result = await this.questionAnsweringPipeline({
-        question: normalizedQuestion,
-        context
+        question: this.normalizeQuestion(question),
+        context: context
       });
 
       let response = result.answer;
       
+      // Enhance short answers with more context
       if (response.length < 50) {
-        // Si la respuesta es muy corta, incluir más contexto
         response = relevantPages[0].content.slice(0, 300) + "...\n\n" + response;
       }
 
+      // Add sources
       response += "\n\nFuentes consultadas:";
       relevantPages.forEach(page => {
         response += `\n- <a href="${page.url}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 underline">${page.title}</a>`;
       });
 
       return response;
+
     } catch (error) {
       console.error('Error processing question:', error);
-      return "Disculpa, hubo un error al procesar tu pregunta. Por favor, intenta reformularla o pregunta algo más específico.";
+      throw error;
     }
   }
 }
