@@ -1,32 +1,44 @@
-import { Pipeline, pipeline } from '@xenova/transformers';
 import { toast } from 'sonner';
 
-export type CustomPipeline = Pipeline & {
-  processor?: any;
+export type CustomPipeline = {
+  (options: { question: string; context: string }): Promise<{ answer: string }>;
 };
 
 export const loadModel = async (): Promise<CustomPipeline> => {
   try {
-    return await pipeline(
-      'question-answering',
-      'Xenova/distilbert-base-multilingual-cased',
-      {
-        progress_callback: (progress: any) => {
-          const percentage = Math.round(progress.progress * 100);
-          console.log(`Loading model: ${percentage}%`);
-          if (progress.progress < 1) {
-            toast.loading(`Cargando modelo de IA: ${percentage}%`);
-          } else {
-            toast.dismiss();
-          }
-        },
-        quantized: false,
-        revision: 'main'
+    // Implementación simple basada en coincidencia de palabras clave
+    const pipeline: CustomPipeline = async ({ question, context }) => {
+      // Normalizar el texto para búsqueda
+      const normalizedQuestion = question.toLowerCase();
+      const normalizedContext = context.toLowerCase();
+      
+      // Encontrar la oración más relevante del contexto
+      const sentences = context.split(/[.!?]+/).filter(s => s.trim());
+      let bestMatch = '';
+      let bestScore = 0;
+      
+      for (const sentence of sentences) {
+        const words = normalizedQuestion.split(/\s+/);
+        const score = words.filter(word => 
+          normalizedContext.includes(word.toLowerCase())
+        ).length;
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = sentence.trim();
+        }
       }
-    ) as CustomPipeline;
+      
+      return {
+        answer: bestMatch || "No encontré una respuesta específica a tu pregunta en el contenido disponible."
+      };
+    };
+
+    toast.success('Sistema de respuestas inicializado');
+    return pipeline;
   } catch (error) {
     console.error('Error loading model:', error);
-    toast.error('Error al cargar el modelo de IA');
+    toast.error('Error al inicializar el sistema de respuestas');
     throw error;
   }
 };

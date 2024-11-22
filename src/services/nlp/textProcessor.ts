@@ -1,7 +1,5 @@
-import { Pipeline } from '@xenova/transformers';
 import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
-import * as pdfjsLib from 'pdfjs-dist';
 import { toast } from 'sonner';
 import { loadModel } from './modelLoader';
 import { calculateRelevance, cleanContent } from './contentProcessor';
@@ -20,10 +18,7 @@ export class TextProcessor {
     try {
       console.log('Initializing TextProcessor...');
       
-      // Initialize PDF.js worker
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-      
-      // Load the model
+      // Load the simple model
       this.questionAnsweringPipeline = await loadModel();
       
       // Start scraping
@@ -86,17 +81,11 @@ export class TextProcessor {
       // Get answer using the pipeline
       const result = await this.questionAnsweringPipeline({
         question: normalizeQuestion(question),
-        context: context,
-        max_answer_length: 200
+        context: context
       });
 
       let response = result.answer;
       
-      // Enhance short answers with more context
-      if (response.length < 50) {
-        response = relevantPages[0].content.slice(0, 300) + "...\n\n" + response;
-      }
-
       // Add sources
       response += "\n\nFuentes consultadas:";
       relevantPages.forEach(page => {
