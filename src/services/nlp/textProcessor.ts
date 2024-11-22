@@ -18,7 +18,7 @@ export class TextProcessor {
     try {
       console.log('Initializing TextProcessor...');
       
-      // Load the simple model
+      // Load the model
       this.questionAnsweringPipeline = await loadModel();
       
       // Start scraping
