@@ -1,20 +1,13 @@
-import { Pipeline, pipeline } from '@xenova/transformers';
+import { Pipeline } from '@xenova/transformers';
 import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
 import * as pdfjsLib from 'pdfjs-dist';
-import stringSimilarity from 'string-similarity';
 import { toast } from 'sonner';
-
-interface ProcessedContent {
-  url: string;
-  title: string;
-  content: string;
-  relevanceScore: number;
-}
-
-type CustomPipeline = Pipeline & {
-  processor?: any;
-};
+import { loadModel } from './modelLoader';
+import { calculateRelevance, cleanContent } from './contentProcessor';
+import { normalizeQuestion } from './questionNormalizer';
+import type { ProcessedContent } from './types';
+import type { CustomPipeline } from './modelLoader';
 
 export class TextProcessor {
   private static processedPages: ProcessedContent[] = [];
@@ -30,21 +23,8 @@ export class TextProcessor {
       // Initialize PDF.js worker
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
       
-      // Initialize the pipeline with a lighter model
-      this.questionAnsweringPipeline = await pipeline(
-        'question-answering',
-        'Xenova/distilbert-base-multilingual-cased',
-        {
-          progress_callback: (progress: any) => {
-            console.log(`Loading model: ${Math.round(progress.progress * 100)}%`);
-            if (progress.progress < 1) {
-              toast.loading(`Cargando modelo de IA: ${Math.round(progress.progress * 100)}%`);
-            } else {
-              toast.dismiss();
-            }
-          }
-        }
-      ) as CustomPipeline;
+      // Load the model
+      this.questionAnsweringPipeline = await loadModel();
       
       // Start scraping
       console.log('Starting web scraping...');
@@ -59,7 +39,7 @@ export class TextProcessor {
         this.processedPages.push({
           url,
           title: page.title || url,
-          content: this.cleanContent(page.content || ''),
+          content: cleanContent(page.content || ''),
           relevanceScore: 0
         });
       });
@@ -74,87 +54,19 @@ export class TextProcessor {
     }
   }
 
-  private static cleanContent(content: string): string {
-    return content
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  private static normalizeQuestion(question: string): string {
-    const keywords: { [key: string]: string[] } = {
-      'servicio social': ['servicio', 'social', 'ss', 'servicio_social'],
-      'practicas profesionales': ['practicas', 'profesionales', 'pp', 'practicas_profesionales'],
-      'electivas': ['electivas', 'optativas', 'materias optativas', 'materias_optativas'],
-      'malla curricular': ['malla', 'curricular', 'plan de estudios', 'materias', 'plan_de_estudios'],
-      'tramites': ['tramite', 'tramites', 'proceso', 'requisitos', 'documentos'],
-      'liberacion': ['liberar', 'liberacion', 'libero', 'acreditar', 'terminar'],
-      'informatica': ['informatica', 'sistemas', 'computacion', 'software'],
-      'industrial': ['industrial', 'industrias', 'manufactura'],
-      'transporte': ['transporte', 'transportes', 'logistica'],
-      'metalurgia': ['metalurgia', 'metales', 'metalurgica'],
-      'energia': ['energia', 'energias', 'energetica']
-    };
-
-    let normalizedQuestion = question.toLowerCase();
-    
-    Object.entries(keywords).forEach(([key, synonyms]) => {
-      synonyms.forEach(synonym => {
-        const regex = new RegExp(`\\b${synonym}\\b`, 'gi');
-        normalizedQuestion = normalizedQuestion.replace(regex, key);
-      });
-    });
-
-    return normalizedQuestion;
-  }
-
-  private static calculateRelevance(question: string, content: ProcessedContent): number {
-    const normalizedQuestion = this.normalizeQuestion(question);
-    const normalizedContent = this.cleanContent(content.content);
-    
-    let score = 0;
-    
-    // Base similarity score
-    const similarity = stringSimilarity.compareTwoStrings(normalizedQuestion, normalizedContent);
-    score += similarity * 5;
-    
-    // URL relevance
-    const urlKeywords = normalizedQuestion.split(' ');
-    urlKeywords.forEach(keyword => {
-      if (content.url.toLowerCase().includes(keyword)) {
-        score += 2;
-      }
-    });
-    
-    // Title relevance
-    const titleSimilarity = stringSimilarity.compareTwoStrings(normalizedQuestion, content.title.toLowerCase());
-    score += titleSimilarity * 3;
-    
-    // Content length penalty (to avoid very short responses)
-    if (content.content.length < 100) {
-      score *= 0.5;
-    }
-    
-    return score;
-  }
-
   static async processQuestion(question: string): Promise<string> {
     if (!this.initialized) {
       await this.initialize();
     }
 
     try {
-      console.log('Processing question:', question);
-      
       if (this.processedPages.length === 0) {
         throw new Error('No hay contenido disponible para procesar la pregunta');
       }
 
       // Calculate relevance scores
       this.processedPages.forEach(page => {
-        page.relevanceScore = this.calculateRelevance(question, page);
+        page.relevanceScore = calculateRelevance(question, page);
       });
 
       // Sort by relevance and get top results
@@ -173,7 +85,7 @@ export class TextProcessor {
 
       // Get answer using the pipeline
       const result = await this.questionAnsweringPipeline({
-        question: this.normalizeQuestion(question),
+        question: normalizeQuestion(question),
         context: context,
         max_answer_length: 200
       });
@@ -192,7 +104,6 @@ export class TextProcessor {
       });
 
       return response;
-
     } catch (error) {
       console.error('Error processing question:', error);
       throw error;
