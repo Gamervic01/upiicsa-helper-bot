@@ -58,11 +58,17 @@ class UPIICSAScraper {
       // Extract links
       const linkElements = doc.querySelectorAll(SELECTORS.links);
       const links: ScrapedLink[] = Array.from(linkElements)
-        .map(el => ({
-          url: (el as HTMLAnchorElement).href || '',
-          text: el.textContent || '',
-          type: 'internal'
-        }))
+        .map(el => {
+          const href = (el as HTMLAnchorElement).href || '';
+          const normalizedUrl = this.normalizeUrl(href);
+          return {
+            url: normalizedUrl,
+            text: el.textContent || '',
+            type: this.isAllowedUrl(normalizedUrl) ? 'internal' : 
+                  href.toLowerCase().endsWith('.pdf') ? 'pdf' : 
+                  'external'
+          } as ScrapedLink;
+        })
         .filter(link => link.url);
 
       const title = doc.title || url;
@@ -80,6 +86,7 @@ class UPIICSAScraper {
 
       // Add new URLs to queue
       links
+        .filter(link => link.type === 'internal')
         .map(link => this.normalizeUrl(link.url))
         .filter(url => this.isAllowedUrl(url) && !this.visitedUrls.has(url))
         .forEach(url => this.queue.push(url));
