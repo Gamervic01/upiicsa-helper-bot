@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { load } from 'cheerio';
-import * as pdfParse from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist';
 import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
 
@@ -11,6 +11,8 @@ class UPIICSAScraper {
 
   constructor() {
     this.queue.push(UPIICSA_BASE_URL);
+    // Initialize PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }
 
   private isAllowedUrl(url: string): boolean {
@@ -45,20 +47,50 @@ class UPIICSAScraper {
     return this.isAllowedUrl(url) ? 'internal' : 'external';
   }
 
-  private async scrapePDF(url: string): Promise<string> {
+  private async extractTextFromPDF(pdfData: ArrayBuffer): Promise<string> {
     try {
-      const response = await axios.get(url, { responseType: 'arraybuffer' });
-      const data = await pdfParse(response.data);
-      return data.text;
+      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+      let text = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map((item: any) => item.str).join(' ') + '\n';
+      }
+      
+      return text;
     } catch (error) {
-      console.error(`Error al procesar PDF ${url}:`, error);
+      console.error('Error extracting text from PDF:', error);
       return '';
     }
   }
 
   private async scrapePage(url: string): Promise<ScrapingResult> {
     try {
-      const response = await axios.get(url);
+      const response = await axios.get(url, {
+        responseType: url.toLowerCase().endsWith('.pdf') ? 'arraybuffer' : 'text'
+      });
+      
+      if (url.toLowerCase().endsWith('.pdf')) {
+        const pdfText = await this.extractTextFromPDF(response.data);
+        const scrapedPage: ScrapedPage = {
+          url,
+          title: url.split('/').pop() || url,
+          content: pdfText,
+          links: [],
+          lastScraped: new Date(),
+          pdfContent: pdfText
+        };
+        
+        this.results.set(url, scrapedPage);
+        this.visitedUrls.add(url);
+        
+        return {
+          success: true,
+          data: scrapedPage
+        };
+      }
+
       const $ = load(response.data);
       
       const links: ScrapedLink[] = [];
@@ -85,18 +117,12 @@ class UPIICSAScraper {
         .filter(text => text.length > 0)
         .join('\n');
 
-      let pdfContent: string | undefined;
-      if (url.toLowerCase().endsWith('.pdf')) {
-        pdfContent = await this.scrapePDF(url);
-      }
-
       const scrapedPage: ScrapedPage = {
         url,
         title: $(SELECTORS.title).text().trim(),
         content,
         links,
-        lastScraped: new Date(),
-        pdfContent
+        lastScraped: new Date()
       };
 
       this.results.set(url, scrapedPage);
