@@ -4,6 +4,7 @@ export interface ScrapedPage {
   content: string;
   links: ScrapedLink[];
   lastScraped: Date;
+  pdfContent?: string;
 }
 
 export interface ScrapedLink {

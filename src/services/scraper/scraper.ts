@@ -1,5 +1,6 @@
 import axios from 'axios';
-import cheerio from 'cheerio';
+import { load } from 'cheerio';
+import * as pdfParse from 'pdf-parse';
 import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
 
@@ -44,10 +45,21 @@ class UPIICSAScraper {
     return this.isAllowedUrl(url) ? 'internal' : 'external';
   }
 
+  private async scrapePDF(url: string): Promise<string> {
+    try {
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      const data = await pdfParse(response.data);
+      return data.text;
+    } catch (error) {
+      console.error(`Error al procesar PDF ${url}:`, error);
+      return '';
+    }
+  }
+
   private async scrapePage(url: string): Promise<ScrapingResult> {
     try {
       const response = await axios.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = load(response.data);
       
       const links: ScrapedLink[] = [];
       $(SELECTORS.links).each((_, element) => {
@@ -73,12 +85,18 @@ class UPIICSAScraper {
         .filter(text => text.length > 0)
         .join('\n');
 
+      let pdfContent: string | undefined;
+      if (url.toLowerCase().endsWith('.pdf')) {
+        pdfContent = await this.scrapePDF(url);
+      }
+
       const scrapedPage: ScrapedPage = {
         url,
         title: $(SELECTORS.title).text().trim(),
         content,
         links,
-        lastScraped: new Date()
+        lastScraped: new Date(),
+        pdfContent
       };
 
       this.results.set(url, scrapedPage);
@@ -91,7 +109,7 @@ class UPIICSAScraper {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Error durante el scraping'
       };
     }
   }
