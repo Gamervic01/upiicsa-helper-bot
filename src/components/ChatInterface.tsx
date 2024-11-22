@@ -7,6 +7,7 @@ import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
 import { procesarRespuesta, prepareTextForSpeech } from "../utils/messageProcessor";
 import { Switch } from "./ui/switch";
 import { Volume2, VolumeX } from "lucide-react";
+import { TextProcessor } from "../services/nlp/textProcessor";
 
 interface Message {
   text: string;
@@ -26,6 +27,19 @@ export const ChatInterface = () => {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        await TextProcessor.initialize();
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing TextProcessor:', error);
+      }
+    };
+    initialize();
+  }, []);
 
   useEffect(() => {
     actualizarPreguntasSugeridas();
@@ -40,19 +54,15 @@ export const ChatInterface = () => {
   const speak = async (text: string) => {
     if (!isSpeechEnabled) return;
     
-    // Cancelar cualquier lectura anterior
     window.speechSynthesis.cancel();
     
-    // Preparar el texto para una lectura más natural
     const processedText = prepareTextForSpeech(text);
     
     const utterance = new SpeechSynthesisUtterance(processedText);
     utterance.lang = 'es-MX';
     
-    // Obtener todas las voces disponibles
     const voices = window.speechSynthesis.getVoices();
     
-    // Buscar una voz en español
     const spanishVoice = voices.find(voice => 
       voice.lang.startsWith('es') && voice.localService
     );
@@ -61,15 +71,14 @@ export const ChatInterface = () => {
       utterance.voice = spanishVoice;
     }
     
-    // Ajustar parámetros para una voz más natural
-    utterance.rate = 0.9; // Velocidad ligeramente más lenta
-    utterance.pitch = 1.1; // Tono ligeramente más alto
-    utterance.volume = 1.0; // Volumen máximo
+    utterance.rate = 0.9;
+    utterance.pitch = 1.1;
+    utterance.volume = 1.0;
     
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     const newUserMessage = {
       text,
       isBot: false,
@@ -79,10 +88,8 @@ export const ChatInterface = () => {
     setMessages(prev => [...prev, newUserMessage]);
     setIsTyping(true);
     
-    const thinkingTime = Math.random() * 1000 + 500;
-    
-    setTimeout(() => {
-      const respuesta = procesarRespuesta(text, setUserName, messages);
+    try {
+      const respuesta = await procesarRespuesta(text, setUserName, messages);
       const newBotMessage = {
         text: respuesta,
         isBot: true,
@@ -90,13 +97,22 @@ export const ChatInterface = () => {
       };
       
       setMessages(prev => [...prev, newBotMessage]);
-      setIsTyping(false);
-      actualizarPreguntasSugeridas();
       
       if (isSpeechEnabled) {
         speak(respuesta);
       }
-    }, thinkingTime);
+    } catch (error) {
+      console.error('Error processing message:', error);
+      const errorMessage = {
+        text: "Lo siento, ha ocurrido un error al procesar tu mensaje. ¿Podrías intentarlo de nuevo?",
+        isBot: true,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+      actualizarPreguntasSugeridas();
+    }
   };
 
   return (

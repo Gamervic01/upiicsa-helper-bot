@@ -1,5 +1,6 @@
 import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
 import stringSimilarity from 'string-similarity';
+import { TextProcessor } from "../services/nlp/textProcessor";
 
 interface Message {
   text: string;
@@ -17,11 +18,9 @@ const normalizeText = (text: string): string => {
 };
 
 const prepareTextForSpeech = (text: string): string => {
-  // Reemplazar URLs con un mensaje más natural
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const textWithoutUrls = text.replace(urlRegex, 'Te invito a revisar el enlace que te comparto.');
   
-  // Reemplazar emojis con espacios para que no intente leerlos
   const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]/gu;
   const textWithoutEmojis = textWithoutUrls.replace(emojiRegex, '');
   
@@ -120,7 +119,7 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
   return null;
 };
 
-export const procesarRespuesta = (pregunta: string, setUserName: (name: string) => void, messages: Message[]): string => {
+export const procesarRespuesta = async (pregunta: string, setUserName: (name: string) => void, messages: Message[]): Promise<string> => {
   const preguntaLower = pregunta.toLowerCase().trim();
   
   // Primero intentamos obtener una respuesta contextual
@@ -136,7 +135,17 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
     }
   }
 
-  // Buscar la mejor coincidencia en las preguntas predefinidas
+  try {
+    // Intentar obtener una respuesta del procesador de texto
+    const nlpResponse = await TextProcessor.processQuestion(pregunta);
+    if (nlpResponse) {
+      return nlpResponse;
+    }
+  } catch (error) {
+    console.error('Error getting NLP response:', error);
+  }
+
+  // Si no encontramos una respuesta con NLP, buscamos en las preguntas predefinidas
   const todasLasPreguntas = Object.keys(TODAS_LAS_PREGUNTAS);
   const bestMatch = findBestMatch(pregunta, todasLasPreguntas);
   
