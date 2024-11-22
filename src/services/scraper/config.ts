@@ -1,5 +1,4 @@
 export const UPIICSA_BASE_URL = 'https://www.upiicsa.ipn.mx';
-export const CORS_PROXY = 'https://corsproxy.io/?' + encodeURIComponent(UPIICSA_BASE_URL);
 
 export const ALLOWED_DOMAINS = [
   'www.upiicsa.ipn.mx',

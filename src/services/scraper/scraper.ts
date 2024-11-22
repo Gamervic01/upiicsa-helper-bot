@@ -1,7 +1,6 @@
-import axios from 'axios';
-import { load } from 'cheerio';
+import puppeteer from 'puppeteer';
 import * as pdfjsLib from 'pdfjs-dist';
-import { UPIICSA_BASE_URL, CORS_PROXY, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
+import { UPIICSA_BASE_URL, ALLOWED_DOMAINS, SCRAPING_RULES, SELECTORS } from './config';
 import type { ScrapedPage, ScrapedLink, ScrapingResult } from './types';
 import { toast } from 'sonner';
 
@@ -9,9 +8,10 @@ class UPIICSAScraper {
   private visitedUrls: Set<string> = new Set();
   private queue: string[] = [];
   private results: Map<string, ScrapedPage> = new Map();
+  private browser: puppeteer.Browser | null = null;
 
   constructor() {
-    this.queue.push(CORS_PROXY);
+    this.queue.push(UPIICSA_BASE_URL);
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }
 
@@ -26,14 +26,13 @@ class UPIICSAScraper {
     }
   }
 
-  private normalizeUrl(url: string, baseUrl: string): string {
+  private normalizeUrl(url: string): string {
     try {
       if (url.startsWith('//')) {
         return `https:${url}`;
       }
       if (url.startsWith('/')) {
-        const baseUrlObj = new URL(UPIICSA_BASE_URL);
-        return new URL(url, baseUrlObj.origin).href;
+        return new URL(url, UPIICSA_BASE_URL).href;
       }
       return new URL(url, UPIICSA_BASE_URL).href;
     } catch {
@@ -62,71 +61,60 @@ class UPIICSAScraper {
   private async scrapePage(url: string): Promise<ScrapingResult> {
     try {
       console.log(`Scraping: ${url}`);
-      
-      const proxyUrl = url === CORS_PROXY ? url : 'https://corsproxy.io/?' + encodeURIComponent(url);
-      
-      const response = await axios.get(proxyUrl, {
-        responseType: url.toLowerCase().endsWith('.pdf') ? 'arraybuffer' : 'text',
-        timeout: 10000,
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'es-MX,es;q=0.8,en-US;q=0.5,en;q=0.3',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-      });
-      
-      if (url.toLowerCase().endsWith('.pdf')) {
-        const pdfText = await this.extractTextFromPDF(response.data);
-        const scrapedPage: ScrapedPage = {
-          url,
-          title: url.split('/').pop() || url,
-          content: pdfText,
-          links: [],
-          lastScraped: new Date(),
-          pdfContent: pdfText
-        };
-        
-        this.results.set(url, scrapedPage);
-        this.visitedUrls.add(url);
-        
-        return { success: true, data: scrapedPage };
+
+      if (!this.browser) {
+        this.browser = await puppeteer.launch({
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
       }
 
-      const $ = load(response.data);
+      const page = await this.browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
       
-      const links: ScrapedLink[] = [];
-      $(SELECTORS.links).each((_, element) => {
-        const link = $(element);
-        const href = link.attr('href');
-        if (href) {
-          const normalizedUrl = this.normalizeUrl(href, url);
-          if (this.isAllowedUrl(normalizedUrl) && !this.visitedUrls.has(normalizedUrl)) {
-            this.queue.push(normalizedUrl);
-            links.push({
-              url: normalizedUrl,
-              text: link.text().trim(),
-              type: 'internal'
-            });
-          }
-        }
-      });
+      try {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+      } catch (error) {
+        console.error(`Error navigating to ${url}:`, error);
+        await page.close();
+        return { success: false, error: 'Error accessing page' };
+      }
 
-      const content = $(SELECTORS.content)
-        .map((_, el) => $(el).text().trim())
-        .get()
-        .filter(text => text.length > 0)
-        .join('\n');
+      // Extract content
+      const content = await page.evaluate((selectors) => {
+        const elements = document.querySelectorAll(selectors.content);
+        return Array.from(elements).map(el => el.textContent).join('\n');
+      }, SELECTORS);
+
+      // Extract links
+      const links: ScrapedLink[] = await page.evaluate((selectors) => {
+        const linkElements = document.querySelectorAll(selectors.links);
+        return Array.from(linkElements).map(el => ({
+          url: el.getAttribute('href') || '',
+          text: el.textContent || '',
+          type: 'internal'
+        }));
+      }, SELECTORS);
+
+      const title = await page.title();
+      await page.close();
 
       const scrapedPage: ScrapedPage = {
         url,
-        title: $(SELECTORS.title).text().trim() || url.split('/').pop() || url,
-        content,
-        links,
+        title: title || url,
+        content: content || '',
+        links: links.filter(link => link.url),
         lastScraped: new Date()
       };
 
       this.results.set(url, scrapedPage);
       this.visitedUrls.add(url);
+
+      // Add new URLs to queue
+      links
+        .map(link => this.normalizeUrl(link.url))
+        .filter(url => this.isAllowedUrl(url) && !this.visitedUrls.has(url))
+        .forEach(url => this.queue.push(url));
 
       return { success: true, data: scrapedPage };
     } catch (error) {
@@ -159,6 +147,11 @@ class UPIICSAScraper {
         }
       }
 
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
+
       console.log(`Scraping completed. Processed ${processedCount} pages.`);
       return this.results;
     } catch (error) {
@@ -175,7 +168,7 @@ class UPIICSAScraper {
   public clearResults(): void {
     this.results.clear();
     this.visitedUrls.clear();
-    this.queue = [CORS_PROXY];
+    this.queue = [UPIICSA_BASE_URL];
   }
 }
 
