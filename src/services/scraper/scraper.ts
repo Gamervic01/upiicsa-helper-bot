@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
 import { toast } from 'sonner';
@@ -39,14 +38,15 @@ class UPIICSAScraper {
             }
 
             console.log(`Scraping: ${url}`);
-            const { data: { data: html }, error } = await supabase.functions.invoke('proxy', {
-                body: { url }
+            const { data, error } = await supabase.functions.invoke('proxy', {
+                body: JSON.stringify({ url })
             });
 
             if (error) throw error;
+            if (!data) throw new Error('No data received from proxy');
             
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            const doc = parser.parseFromString(data.html || '', 'text/html');
 
             const title = doc.querySelector(SELECTORS.title)?.textContent?.trim() || '';
             const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
@@ -86,13 +86,14 @@ class UPIICSAScraper {
         try {
             console.log('Starting scraping process...');
             
-            const { data: { data: html }, error } = await supabase.functions.invoke('proxy', {
-                body: { url: BASE_URL }
+            const { data, error } = await supabase.functions.invoke('proxy', {
+                body: JSON.stringify({ url: BASE_URL })
             });
 
             if (error) throw error;
+            if (!data) throw new Error('No data received from proxy');
 
-            const menuUrls = await this.extractMenuItems(html);
+            const menuUrls = await this.extractMenuItems(data.html || '');
 
             for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {

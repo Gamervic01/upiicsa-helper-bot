@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url).searchParams.get('url');
+    const { url } = await req.json();
     
     if (!url) {
       return new Response(
@@ -26,12 +26,12 @@ serve(async (req) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-    const content = await page.content();
+    const html = await page.content();
     await browser.close();
 
     return new Response(
-      content,
-      { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+      JSON.stringify({ html }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error en el proxy:', error);
