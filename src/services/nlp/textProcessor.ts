@@ -52,9 +52,12 @@ export class TextProcessor {
     }
 
     try {
+      // Normalizar y procesar la pregunta
+      const normalizedQuestion = normalizeQuestion(question);
+      
       // Calcular relevancia de cada página
       this.processedPages.forEach(page => {
-        page.relevanceScore = calculateRelevance(question, page);
+        page.relevanceScore = calculateRelevance(normalizedQuestion, page);
       });
 
       // Ordenar las páginas por relevancia y seleccionar las más importantes
@@ -73,7 +76,7 @@ export class TextProcessor {
 
       // Usar el modelo para obtener una respuesta
       const result = await this.questionAnsweringPipeline({
-        question: normalizeQuestion(question),
+        question: normalizedQuestion,
         context: context
       });
 
@@ -82,7 +85,7 @@ export class TextProcessor {
       }
 
       // Formatear la respuesta
-      let response = result.answer;
+      let response = result.answer.trim();
       
       // Agregar fuentes relevantes
       const sources = relevantPages

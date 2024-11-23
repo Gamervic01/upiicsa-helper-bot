@@ -1,6 +1,6 @@
+import { load } from 'cheerio';
 import axios from 'axios';
-import cheerio from 'cheerio';
-import { SELECTORS } from './config';
+import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
 import { toast } from 'sonner';
 
@@ -24,13 +24,47 @@ class UPIICSAScraper {
         }
     }
 
+    private normalizeUrl(url: string): string {
+        if (url.startsWith('http')) return url;
+        if (url.startsWith('//')) return `https:${url}`;
+        return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+
+    private async extractMenuItems($: cheerio.CheerioAPI): Promise<string[]> {
+        const menuUrls = new Set<string>();
+        
+        // Obtener todos los elementos del menú principal
+        $(SELECTORS.mainMenu).each((_, menuItem) => {
+            const $menuItem = $(menuItem);
+            
+            // Obtener el enlace principal del menú
+            const mainLink = $menuItem.find('> a').attr('href');
+            if (mainLink) {
+                menuUrls.add(this.normalizeUrl(mainLink));
+            }
+            
+            // Obtener enlaces del submenú
+            $menuItem.find(SELECTORS.subMenu).each((_, subItem) => {
+                const subLink = $(subItem).attr('href');
+                if (subLink) {
+                    menuUrls.add(this.normalizeUrl(subLink));
+                }
+            });
+        });
+
+        return Array.from(menuUrls);
+    }
+
     private async scrapePage(url: string): Promise<ScrapingResult> {
         try {
+            if (this.visitedUrls.has(url)) {
+                return { success: true, data: this.results.get(url) };
+            }
+
             console.log(`Scraping: ${url}`);
             const html = await this.fetchWithProxy(url);
-            const $ = cheerio.load(html);
+            const $ = load(html);
 
-            // Extraer título y contenido
             const title = $(SELECTORS.title).first().text().trim();
             const content = $(SELECTORS.content)
                 .map((_, el) => $(el).text().trim())
@@ -42,13 +76,7 @@ class UPIICSAScraper {
                 .map((_, el) => {
                     const href = $(el).attr('href');
                     if (!href) return null;
-                    
-                    // Convertir URLs relativas a absolutas
-                    const absoluteUrl = href.startsWith('http') 
-                        ? href 
-                        : `https://www.upiicsa.ipn.mx${href.startsWith('/') ? '' : '/'}${href}`;
-                    
-                    return absoluteUrl;
+                    return this.normalizeUrl(href);
                 })
                 .get()
                 .filter(Boolean);
@@ -71,7 +99,7 @@ class UPIICSAScraper {
             return { success: true, data: scrapedPage };
         } catch (error) {
             console.error(`Error scraping ${url}:`, error);
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
     }
 
@@ -80,23 +108,17 @@ class UPIICSAScraper {
             console.log('Starting scraping process...');
             
             // Comenzar con la página principal
-            const mainUrl = 'https://www.upiicsa.ipn.mx';
-            await this.scrapePage(mainUrl);
+            const mainPageResult = await this.scrapePage(BASE_URL);
+            if (!mainPageResult.success || !mainPageResult.data) {
+                throw new Error('Failed to scrape main page');
+            }
 
-            // Procesar páginas encontradas
-            const pagesToVisit = Array.from(this.results.values())
-                .flatMap(page => page.links)
-                .map(link => link.url)
-                .filter(url => 
-                    url.includes('upiicsa.ipn.mx') && 
-                    !this.visitedUrls.has(url) &&
-                    (url.includes('electivas') || 
-                     url.includes('servicio-social') || 
-                     url.includes('practicas') || 
-                     url.includes('titulacion'))
-                );
+            // Extraer URLs del menú
+            const $ = load(await this.fetchWithProxy(BASE_URL));
+            const menuUrls = await this.extractMenuItems($);
 
-            for (const url of pagesToVisit) {
+            // Procesar cada URL del menú
+            for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {
                     await this.scrapePage(url);
                     // Pequeña pausa para no sobrecargar el servidor
