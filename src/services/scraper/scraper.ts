@@ -1,4 +1,4 @@
-import { load } from 'cheerio';
+import * as cheerio from 'cheerio';
 import axios from 'axios';
 import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
@@ -63,7 +63,7 @@ class UPIICSAScraper {
 
             console.log(`Scraping: ${url}`);
             const html = await this.fetchWithProxy(url);
-            const $ = load(html);
+            const $ = cheerio.load(html);
 
             const title = $(SELECTORS.title).first().text().trim();
             const content = $(SELECTORS.content)
@@ -114,7 +114,7 @@ class UPIICSAScraper {
             }
 
             // Extraer URLs del menú
-            const $ = load(await this.fetchWithProxy(BASE_URL));
+            const $ = cheerio.load(await this.fetchWithProxy(BASE_URL));
             const menuUrls = await this.extractMenuItems($);
 
             // Procesar cada URL del menú
