@@ -47,12 +47,19 @@ class UPIICSAScraper {
             const title = doc.querySelector(SELECTORS.title)?.textContent?.trim() || '';
             const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
             const content = contentElements.map(el => el.textContent?.trim()).join('\n');
+            
+            // Fix: Properly type the links array
             const links = Array.from(doc.querySelectorAll(SELECTORS.links))
-                .map(link => ({
-                    url: (link as HTMLAnchorElement).href,
-                    text: link.textContent?.trim() || '',
-                    type: (link as HTMLAnchorElement).href.endsWith('.pdf') ? 'pdf' : 'internal'
-                }));
+                .map(link => {
+                    const href = (link as HTMLAnchorElement).href;
+                    return {
+                        url: href,
+                        text: link.textContent?.trim() || '',
+                        type: href.endsWith('.pdf') ? 'pdf' as const : 
+                              href.startsWith(BASE_URL) ? 'internal' as const : 
+                              'external' as const
+                    };
+                });
 
             const scrapedPage: ScrapedPage = {
                 url,
