@@ -1,5 +1,4 @@
-import * as cheerio from 'cheerio';
-import axios from 'axios';
+import puppeteer from 'puppeteer';
 import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
 import { toast } from 'sonner';
@@ -7,22 +6,6 @@ import { toast } from 'sonner';
 class UPIICSAScraper {
     private visitedUrls: Set<string> = new Set();
     private results: Map<string, ScrapedPage> = new Map();
-    private proxyUrl = 'https://corsproxy.io/?';
-
-    private async fetchWithProxy(url: string): Promise<string> {
-        try {
-            const response = await axios.get(`${this.proxyUrl}${encodeURIComponent(url)}`, {
-                headers: {
-                    'Accept': 'text/html',
-                    'User-Agent': 'Mozilla/5.0 (compatible; UPIICSABot/1.0;)'
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error(`Error fetching ${url}:`, error);
-            throw new Error(`Error al obtener contenido de ${url}`);
-        }
-    }
 
     private normalizeUrl(url: string): string {
         if (url.startsWith('http')) return url;
@@ -30,66 +13,55 @@ class UPIICSAScraper {
         return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
-    private async extractMenuItems($: cheerio.CheerioAPI): Promise<string[]> {
+    private async extractMenuItems(page: puppeteer.Page): Promise<string[]> {
         const menuUrls = new Set<string>();
         
-        // Obtener todos los elementos del menú principal
-        $(SELECTORS.mainMenu).each((_, menuItem) => {
-            const $menuItem = $(menuItem);
+        // Obtener URLs del menú principal y submenús
+        const urls = await page.evaluate((selectors) => {
+            const mainMenuLinks = Array.from(document.querySelectorAll(selectors.menu))
+                .map(link => (link as HTMLAnchorElement).href);
             
-            // Obtener el enlace principal del menú
-            const mainLink = $menuItem.find('> a').attr('href');
-            if (mainLink) {
-                menuUrls.add(this.normalizeUrl(mainLink));
-            }
+            const subMenuLinks = Array.from(document.querySelectorAll(selectors.subMenu))
+                .map(link => (link as HTMLAnchorElement).href);
             
-            // Obtener enlaces del submenú
-            $menuItem.find(SELECTORS.subMenu).each((_, subItem) => {
-                const subLink = $(subItem).attr('href');
-                if (subLink) {
-                    menuUrls.add(this.normalizeUrl(subLink));
-                }
-            });
-        });
+            return [...mainMenuLinks, ...subMenuLinks];
+        }, SELECTORS);
 
+        urls.forEach(url => menuUrls.add(this.normalizeUrl(url)));
         return Array.from(menuUrls);
     }
 
-    private async scrapePage(url: string): Promise<ScrapingResult> {
+    private async scrapePage(browser: puppeteer.Browser, url: string): Promise<ScrapingResult> {
         try {
             if (this.visitedUrls.has(url)) {
                 return { success: true, data: this.results.get(url) };
             }
 
             console.log(`Scraping: ${url}`);
-            const html = await this.fetchWithProxy(url);
-            const $ = cheerio.load(html);
+            const page = await browser.newPage();
+            await page.goto(url, { waitUntil: 'networkidle0' });
 
-            const title = $(SELECTORS.title).first().text().trim();
-            const content = $(SELECTORS.content)
-                .map((_, el) => $(el).text().trim())
-                .get()
-                .join('\n');
+            const content = await page.evaluate((selectors) => {
+                const title = document.querySelector(selectors.title)?.textContent?.trim() || '';
+                const contentElements = Array.from(document.querySelectorAll(selectors.content));
+                const content = contentElements.map(el => el.textContent?.trim()).join('\n');
+                const links = Array.from(document.querySelectorAll(selectors.links))
+                    .map(link => ({
+                        url: (link as HTMLAnchorElement).href,
+                        text: link.textContent?.trim() || '',
+                        type: (link as HTMLAnchorElement).href.endsWith('.pdf') ? 'pdf' : 'internal'
+                    }));
+                
+                return { title, content, links };
+            }, SELECTORS);
 
-            // Extraer enlaces relevantes
-            const links = $(SELECTORS.links)
-                .map((_, el) => {
-                    const href = $(el).attr('href');
-                    if (!href) return null;
-                    return this.normalizeUrl(href);
-                })
-                .get()
-                .filter(Boolean);
+            await page.close();
 
             const scrapedPage: ScrapedPage = {
                 url,
-                title: title || url,
-                content: content || '',
-                links: links.map(link => ({
-                    url: link,
-                    text: '',
-                    type: link.endsWith('.pdf') ? 'pdf' : 'internal'
-                })),
+                title: content.title || url,
+                content: content.content || '',
+                links: content.links,
                 lastScraped: new Date()
             };
 
@@ -107,25 +79,25 @@ class UPIICSAScraper {
         try {
             console.log('Starting scraping process...');
             
-            // Comenzar con la página principal
-            const mainPageResult = await this.scrapePage(BASE_URL);
-            if (!mainPageResult.success || !mainPageResult.data) {
-                throw new Error('Failed to scrape main page');
-            }
+            const browser = await puppeteer.launch({
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
 
-            // Extraer URLs del menú
-            const $ = cheerio.load(await this.fetchWithProxy(BASE_URL));
-            const menuUrls = await this.extractMenuItems($);
+            const page = await browser.newPage();
+            await page.goto(BASE_URL, { waitUntil: 'networkidle0' });
+            
+            const menuUrls = await this.extractMenuItems(page);
+            await page.close();
 
-            // Procesar cada URL del menú
             for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {
-                    await this.scrapePage(url);
-                    // Pequeña pausa para no sobrecargar el servidor
+                    await this.scrapePage(browser, url);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
 
+            await browser.close();
             console.log(`Scraping completed. Processed ${this.results.size} pages.`);
             return this.results;
         } catch (error) {
