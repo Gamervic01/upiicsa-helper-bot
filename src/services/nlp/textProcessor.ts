@@ -1,4 +1,3 @@
-import { ScrapedPage } from '../scraper/types';
 import { scraper } from '../scraper/scraper';
 import { toast } from 'sonner';
 import { loadModel } from './modelLoader';
@@ -18,7 +17,7 @@ export class TextProcessor {
     try {
       console.log('Initializing TextProcessor...');
       
-      // Cargar el modelo para preguntas y respuestas
+      // Cargar el pipeline personalizado
       this.questionAnsweringPipeline = await loadModel();
       
       // Hacer scraping de las páginas
@@ -52,15 +51,12 @@ export class TextProcessor {
     }
 
     try {
-      // Normalizar y procesar la pregunta
       const normalizedQuestion = normalizeQuestion(question);
       
-      // Calcular relevancia de cada página
       this.processedPages.forEach(page => {
         page.relevanceScore = calculateRelevance(normalizedQuestion, page);
       });
 
-      // Ordenar las páginas por relevancia y seleccionar las más importantes
       const relevantPages = [...this.processedPages]
         .sort((a, b) => b.relevanceScore - a.relevanceScore)
         .slice(0, 3);
@@ -69,25 +65,17 @@ export class TextProcessor {
         return "Lo siento, no encontré información específica sobre tu pregunta. ¿Podrías reformularla?";
       }
 
-      // Construir el contexto para el modelo
       const context = relevantPages
         .map(page => `${page.title}\n${page.content}`)
         .join("\n\n");
 
-      // Usar el modelo para obtener una respuesta
       const result = await this.questionAnsweringPipeline({
         question: normalizedQuestion,
         context: context
       });
 
-      if (!result.answer) {
-        return "No pude encontrar una respuesta específica. ¿Podrías ser más específico con tu pregunta?";
-      }
-
-      // Formatear la respuesta
       let response = result.answer.trim();
       
-      // Agregar fuentes relevantes
       const sources = relevantPages
         .map(page => `- ${page.title}: ${page.url}`)
         .join('\n');
