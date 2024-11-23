@@ -12,7 +12,6 @@ export class TextProcessor {
   private static initialized = false;
   private static questionAnsweringPipeline: CustomPipeline;
 
-  // Inicializa el sistema
   static async initialize() {
     if (this.initialized) return;
 
@@ -26,18 +25,16 @@ export class TextProcessor {
       const pages = await scraper.scrapeAll();
       
       if (pages.size === 0) {
-        throw new Error("No se obtuvieron páginas del scraper.");
+        throw new Error("No se pudo obtener contenido del sitio web");
       }
 
       // Procesar las páginas obtenidas
-      pages.forEach((page, url) => {
-        this.processedPages.push({
-          url,
-          title: page.title,
-          content: cleanContent(page.content),
-          relevanceScore: 0
-        });
-      });
+      this.processedPages = Array.from(pages.entries()).map(([url, page]) => ({
+        url,
+        title: page.title,
+        content: cleanContent(page.content),
+        relevanceScore: 0
+      }));
 
       console.log(`Processed ${this.processedPages.length} pages successfully`);
       this.initialized = true;
@@ -49,15 +46,12 @@ export class TextProcessor {
     }
   }
 
-  // Procesar preguntas del usuario
   static async processQuestion(question: string): Promise<string> {
     if (!this.initialized) {
       await this.initialize();
     }
 
     try {
-      console.log(`Processing question: "${question}"`);
-
       // Calcular relevancia de cada página
       this.processedPages.forEach(page => {
         page.relevanceScore = calculateRelevance(question, page);
@@ -68,15 +62,13 @@ export class TextProcessor {
         .sort((a, b) => b.relevanceScore - a.relevanceScore)
         .slice(0, 3);
 
-      if (relevantPages.length === 0 || relevantPages.every(page => page.relevanceScore === 0)) {
-        return "Lo siento, no encontré información específica sobre tu pregunta. ¿Podrías intentar con otra formulación?";
+      if (relevantPages.length === 0) {
+        return "Lo siento, no encontré información específica sobre tu pregunta. ¿Podrías reformularla?";
       }
-
-      console.log('Relevant pages selected:', relevantPages.map(page => page.title));
 
       // Construir el contexto para el modelo
       const context = relevantPages
-        .map(page => `${page.title}: ${page.content}`)
+        .map(page => `${page.title}\n${page.content}`)
         .join("\n\n");
 
       // Usar el modelo para obtener una respuesta
@@ -85,15 +77,24 @@ export class TextProcessor {
         context: context
       });
 
-      if (!result || !result.answer) {
-        console.warn("El modelo no generó una respuesta adecuada.");
-        return "Lo siento, no pude generar una respuesta basada en la información disponible.";
+      if (!result.answer) {
+        return "No pude encontrar una respuesta específica. ¿Podrías ser más específico con tu pregunta?";
       }
 
-      return result.answer;
+      // Formatear la respuesta
+      let response = result.answer;
+      
+      // Agregar fuentes relevantes
+      const sources = relevantPages
+        .map(page => `- ${page.title}: ${page.url}`)
+        .join('\n');
+      
+      response += `\n\nFuentes consultadas:\n${sources}`;
+
+      return response;
     } catch (error) {
       console.error('Error processing question:', error);
-      return "Lo siento, ocurrió un error mientras procesaba tu pregunta. Por favor, intenta de nuevo.";
+      return "Lo siento, ocurrió un error al procesar tu pregunta. Por favor, intenta de nuevo.";
     }
   }
 }
