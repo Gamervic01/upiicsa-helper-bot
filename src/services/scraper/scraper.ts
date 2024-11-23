@@ -2,6 +2,7 @@ import axios from 'axios';
 import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 class UPIICSAScraper {
     private visitedUrls: Set<string> = new Set();
@@ -38,8 +39,11 @@ class UPIICSAScraper {
             }
 
             console.log(`Scraping: ${url}`);
-            const response = await axios.get(url);
-            const html = response.data;
+            const { data: { data: html }, error } = await supabase.functions.invoke('proxy', {
+                body: { url }
+            });
+
+            if (error) throw error;
             
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
@@ -48,7 +52,6 @@ class UPIICSAScraper {
             const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
             const content = contentElements.map(el => el.textContent?.trim()).join('\n');
             
-            // Fix: Properly type the links array
             const links = Array.from(doc.querySelectorAll(SELECTORS.links))
                 .map(link => {
                     const href = (link as HTMLAnchorElement).href;
@@ -83,8 +86,13 @@ class UPIICSAScraper {
         try {
             console.log('Starting scraping process...');
             
-            const response = await axios.get(BASE_URL);
-            const menuUrls = await this.extractMenuItems(response.data);
+            const { data: { data: html }, error } = await supabase.functions.invoke('proxy', {
+                body: { url: BASE_URL }
+            });
+
+            if (error) throw error;
+
+            const menuUrls = await this.extractMenuItems(html);
 
             for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {
