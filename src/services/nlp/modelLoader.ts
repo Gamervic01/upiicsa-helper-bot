@@ -1,4 +1,4 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline, type Pipeline } from '@xenova/transformers';
 import { toast } from 'sonner';
 
 export type CustomPipeline = {
@@ -8,17 +8,22 @@ export type CustomPipeline = {
 export const loadModel = async (): Promise<CustomPipeline> => {
   try {
     // Cargar el modelo de question-answering en español
-    const qa = await pipeline('question-answering', 'Xenova/distilbert-base-multilingual-cased-qa');
+    const qa = await pipeline('question-answering', 'Xenova/distilbert-base-multilingual-cased-qa', {
+      revision: 'main'
+    }) as Pipeline;
     
     const customPipeline: CustomPipeline = async ({ question, context }) => {
       try {
         const result = await qa({
           question,
           context,
+          topk: 1
         });
 
+        const answer = Array.isArray(result) ? result[0]?.answer : result.answer;
+
         return {
-          answer: result.answer || "No encontré una respuesta específica a tu pregunta en el contenido disponible."
+          answer: answer || "No encontré una respuesta específica a tu pregunta en el contenido disponible."
         };
       } catch (error) {
         console.error('Error processing question:', error);

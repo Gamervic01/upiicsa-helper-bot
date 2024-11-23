@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import axios from 'axios';
 import { SELECTORS, BASE_URL } from './config';
 import type { ScrapedPage, ScrapingResult } from './types';
 import { toast } from 'sonner';
@@ -13,55 +13,52 @@ class UPIICSAScraper {
         return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
-    private async extractMenuItems(page: puppeteer.Page): Promise<string[]> {
+    private async extractMenuItems(html: string): Promise<string[]> {
         const menuUrls = new Set<string>();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
         
-        // Obtener URLs del menú principal y submenús
-        const urls = await page.evaluate((selectors) => {
-            const mainMenuLinks = Array.from(document.querySelectorAll(selectors.menu))
-                .map(link => (link as HTMLAnchorElement).href);
-            
-            const subMenuLinks = Array.from(document.querySelectorAll(selectors.subMenu))
-                .map(link => (link as HTMLAnchorElement).href);
-            
-            return [...mainMenuLinks, ...subMenuLinks];
-        }, SELECTORS);
-
-        urls.forEach(url => menuUrls.add(this.normalizeUrl(url)));
+        const mainMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.menu))
+            .map(link => (link as HTMLAnchorElement).href);
+        
+        const subMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.subMenu))
+            .map(link => (link as HTMLAnchorElement).href);
+        
+        [...mainMenuLinks, ...subMenuLinks].forEach(url => 
+            menuUrls.add(this.normalizeUrl(url))
+        );
+        
         return Array.from(menuUrls);
     }
 
-    private async scrapePage(browser: puppeteer.Browser, url: string): Promise<ScrapingResult> {
+    private async scrapePage(url: string): Promise<ScrapingResult> {
         try {
             if (this.visitedUrls.has(url)) {
                 return { success: true, data: this.results.get(url) };
             }
 
             console.log(`Scraping: ${url}`);
-            const page = await browser.newPage();
-            await page.goto(url, { waitUntil: 'networkidle0' });
+            const response = await axios.get(url);
+            const html = response.data;
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
 
-            const content = await page.evaluate((selectors) => {
-                const title = document.querySelector(selectors.title)?.textContent?.trim() || '';
-                const contentElements = Array.from(document.querySelectorAll(selectors.content));
-                const content = contentElements.map(el => el.textContent?.trim()).join('\n');
-                const links = Array.from(document.querySelectorAll(selectors.links))
-                    .map(link => ({
-                        url: (link as HTMLAnchorElement).href,
-                        text: link.textContent?.trim() || '',
-                        type: (link as HTMLAnchorElement).href.endsWith('.pdf') ? 'pdf' : 'internal'
-                    }));
-                
-                return { title, content, links };
-            }, SELECTORS);
-
-            await page.close();
+            const title = doc.querySelector(SELECTORS.title)?.textContent?.trim() || '';
+            const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
+            const content = contentElements.map(el => el.textContent?.trim()).join('\n');
+            const links = Array.from(doc.querySelectorAll(SELECTORS.links))
+                .map(link => ({
+                    url: (link as HTMLAnchorElement).href,
+                    text: link.textContent?.trim() || '',
+                    type: (link as HTMLAnchorElement).href.endsWith('.pdf') ? 'pdf' : 'internal'
+                }));
 
             const scrapedPage: ScrapedPage = {
                 url,
-                title: content.title || url,
-                content: content.content || '',
-                links: content.links,
+                title: title || url,
+                content: content || '',
+                links,
                 lastScraped: new Date()
             };
 
@@ -79,25 +76,16 @@ class UPIICSAScraper {
         try {
             console.log('Starting scraping process...');
             
-            const browser = await puppeteer.launch({
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
-
-            const page = await browser.newPage();
-            await page.goto(BASE_URL, { waitUntil: 'networkidle0' });
-            
-            const menuUrls = await this.extractMenuItems(page);
-            await page.close();
+            const response = await axios.get(BASE_URL);
+            const menuUrls = await this.extractMenuItems(response.data);
 
             for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {
-                    await this.scrapePage(browser, url);
+                    await this.scrapePage(url);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
 
-            await browser.close();
             console.log(`Scraping completed. Processed ${this.results.size} pages.`);
             return this.results;
         } catch (error) {
