@@ -1,5 +1,5 @@
 import { SELECTORS, BASE_URL } from './config';
-import type { ScrapedPage, ScrapingResult } from './types';
+import type { ScrapedPage, ScrapingResult, ScrapedLink } from './types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,15 +52,16 @@ class UPIICSAScraper {
             const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
             const content = contentElements.map(el => el.textContent?.trim()).join('\n');
             
-            const links = Array.from(doc.querySelectorAll(SELECTORS.links))
+            const links: ScrapedLink[] = Array.from(doc.querySelectorAll(SELECTORS.links))
                 .map(link => {
                     const href = (link as HTMLAnchorElement).href;
+                    const linkType = href.endsWith('.pdf') ? 'pdf' as const : 
+                                   href.startsWith(BASE_URL) ? 'internal' as const : 
+                                   'external' as const;
                     return {
                         url: href,
                         text: link.textContent?.trim() || '',
-                        type: href.endsWith('.pdf') ? 'pdf' : 
-                              href.startsWith(BASE_URL) ? 'internal' : 
-                              'external'
+                        type: linkType
                     };
                 });
 
