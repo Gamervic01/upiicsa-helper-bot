@@ -12,8 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { url } = body;
+    const { url } = await req.json();
     
     if (!url) {
       return new Response(
@@ -23,10 +22,13 @@ serve(async (req) => {
     }
 
     console.log(`Proxying request to: ${url}`);
-    const browser = await puppeteer.launch({ headless: true });
+    
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
-
+    await page.goto(url, { waitUntil: 'networkidle0' });
     const html = await page.content();
     await browser.close();
 
