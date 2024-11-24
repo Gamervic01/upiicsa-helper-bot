@@ -39,14 +39,14 @@ class UPIICSAScraper {
 
             console.log(`Scraping: ${url}`);
             const { data, error } = await supabase.functions.invoke('proxy', {
-                body: JSON.stringify({ url })
+                body: { url }
             });
 
             if (error) throw error;
-            if (!data) throw new Error('No data received from proxy');
+            if (!data || !data.html) throw new Error('No data received from proxy');
             
             const parser = new DOMParser();
-            const doc = parser.parseFromString(data.html || '', 'text/html');
+            const doc = parser.parseFromString(data.html, 'text/html');
 
             const title = doc.querySelector(SELECTORS.title)?.textContent?.trim() || '';
             const contentElements = Array.from(doc.querySelectorAll(SELECTORS.content));
@@ -58,9 +58,9 @@ class UPIICSAScraper {
                     return {
                         url: href,
                         text: link.textContent?.trim() || '',
-                        type: href.endsWith('.pdf') ? 'pdf' as const : 
-                              href.startsWith(BASE_URL) ? 'internal' as const : 
-                              'external' as const
+                        type: href.endsWith('.pdf') ? 'pdf' : 
+                              href.startsWith(BASE_URL) ? 'internal' : 
+                              'external'
                     };
                 });
 
@@ -87,13 +87,13 @@ class UPIICSAScraper {
             console.log('Starting scraping process...');
             
             const { data, error } = await supabase.functions.invoke('proxy', {
-                body: JSON.stringify({ url: BASE_URL })
+                body: { url: BASE_URL }
             });
 
             if (error) throw error;
-            if (!data) throw new Error('No data received from proxy');
+            if (!data || !data.html) throw new Error('No data received from proxy');
 
-            const menuUrls = await this.extractMenuItems(data.html || '');
+            const menuUrls = await this.extractMenuItems(data.html);
 
             for (const url of menuUrls) {
                 if (!this.visitedUrls.has(url)) {
