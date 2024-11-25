@@ -1,4 +1,4 @@
-import { SELECTORS, BASE_URL } from './config';
+import { SELECTORS, BASE_URL, SECTIONS } from './config';
 import type { ScrapedPage, ScrapingResult, ScrapedLink } from './types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,28 +6,57 @@ import { supabase } from '@/integrations/supabase/client';
 class UPIICSAScraper {
     private visitedUrls: Set<string> = new Set();
     private results: Map<string, ScrapedPage> = new Map();
+    private menuStructure: Map<string, string[]> = new Map();
 
     private normalizeUrl(url: string): string {
+        if (!url) return '';
         if (url.startsWith('http')) return url;
         if (url.startsWith('//')) return `https:${url}`;
         return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
-    private async extractMenuItems(html: string): Promise<string[]> {
+    private isValidInternalUrl(url: string): boolean {
+        try {
+            const normalizedUrl = this.normalizeUrl(url);
+            const urlObj = new URL(normalizedUrl);
+            return urlObj.hostname === 'www.upiicsa.ipn.mx' && 
+                   !url.includes('#') && 
+                   !url.endsWith('.pdf') &&
+                   !url.endsWith('.doc') &&
+                   !url.endsWith('.docx');
+        } catch {
+            return false;
+        }
+    }
+
+    private async extractMenuItems(html: string, section?: string): Promise<string[]> {
         const menuUrls = new Set<string>();
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        const mainMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.menu))
-            .map(link => (link as HTMLAnchorElement).href);
-        
-        const subMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.subMenu))
-            .map(link => (link as HTMLAnchorElement).href);
-        
-        [...mainMenuLinks, ...subMenuLinks].forEach(url => 
-            menuUrls.add(this.normalizeUrl(url))
-        );
-        
+        // Extract all menu links
+        const menuLinks = Array.from(doc.querySelectorAll(SELECTORS.menu))
+            .map(link => {
+                const href = (link as HTMLAnchorElement).href;
+                const text = link.textContent?.trim() || '';
+                return { href, text };
+            })
+            .filter(link => this.isValidInternalUrl(link.href));
+
+        // If we're looking at a specific section, filter for relevant links
+        if (section) {
+            menuLinks.forEach(link => {
+                if (link.href.includes(section)) {
+                    menuUrls.add(this.normalizeUrl(link.href));
+                    this.menuStructure.set(section, 
+                        [...(this.menuStructure.get(section) || []), link.href]
+                    );
+                }
+            });
+        } else {
+            menuLinks.forEach(link => menuUrls.add(this.normalizeUrl(link.href)));
+        }
+
         return Array.from(menuUrls);
     }
 
@@ -55,14 +84,11 @@ class UPIICSAScraper {
             const links: ScrapedLink[] = Array.from(doc.querySelectorAll(SELECTORS.links))
                 .map(link => {
                     const href = (link as HTMLAnchorElement).href;
-                    const linkType = href.endsWith('.pdf') ? 'pdf' as const : 
-                                   href.startsWith(BASE_URL) ? 'internal' as const : 
-                                   'external' as const;
-                    return {
-                        url: href,
-                        text: link.textContent?.trim() || '',
-                        type: linkType
-                    };
+                    const text = link.textContent?.trim() || '';
+                    const type = href.endsWith('.pdf') ? 'pdf' : 
+                               this.isValidInternalUrl(href) ? 'internal' : 
+                               'external';
+                    return { url: href, text, type };
                 });
 
             const scrapedPage: ScrapedPage = {
@@ -79,7 +105,10 @@ class UPIICSAScraper {
             return { success: true, data: scrapedPage };
         } catch (error) {
             console.error(`Error scraping ${url}:`, error);
-            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error' 
+            };
         }
     }
 
@@ -87,6 +116,7 @@ class UPIICSAScraper {
         try {
             console.log('Starting scraping process...');
             
+            // First, scrape the main page to get the menu structure
             const { data, error } = await supabase.functions.invoke('proxy', {
                 body: { url: BASE_URL }
             });
@@ -94,16 +124,23 @@ class UPIICSAScraper {
             if (error) throw error;
             if (!data || !data.html) throw new Error('No data received from proxy');
 
-            const menuUrls = await this.extractMenuItems(data.html);
+            // Extract menu items for each main section
+            for (const section of Object.values(SECTIONS)) {
+                const sectionUrls = await this.extractMenuItems(data.html, section);
+                console.log(`Found ${sectionUrls.length} URLs for section ${section}`);
 
-            for (const url of menuUrls) {
-                if (!this.visitedUrls.has(url)) {
-                    await this.scrapePage(url);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                // Scrape each URL in the section
+                for (const url of sectionUrls) {
+                    if (!this.visitedUrls.has(url)) {
+                        await this.scrapePage(url);
+                        // Add a small delay between requests
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
                 }
             }
 
             console.log(`Scraping completed. Processed ${this.results.size} pages.`);
+            console.log('Menu structure:', this.menuStructure);
             return this.results;
         } catch (error) {
             console.error('Error during scraping:', error);
@@ -114,6 +151,10 @@ class UPIICSAScraper {
 
     public getResults(): Map<string, ScrapedPage> {
         return this.results;
+    }
+
+    public getMenuStructure(): Map<string, string[]> {
+        return this.menuStructure;
     }
 }
 
