@@ -34,8 +34,17 @@ class UPIICSAScraper {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // Extract all menu links
-        const menuLinks = Array.from(doc.querySelectorAll(SELECTORS.menu))
+        // Extract main menu items first
+        const mainMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.mainMenu))
+            .map(link => {
+                const href = (link as HTMLAnchorElement).href;
+                const text = link.textContent?.trim() || '';
+                return { href, text };
+            })
+            .filter(link => this.isValidInternalUrl(link.href));
+
+        // Extract submenu items
+        const subMenuLinks = Array.from(doc.querySelectorAll(SELECTORS.subMenu))
             .map(link => {
                 const href = (link as HTMLAnchorElement).href;
                 const text = link.textContent?.trim() || '';
@@ -45,7 +54,7 @@ class UPIICSAScraper {
 
         // If we're looking at a specific section, filter for relevant links
         if (section) {
-            menuLinks.forEach(link => {
+            [...mainMenuLinks, ...subMenuLinks].forEach(link => {
                 if (link.href.includes(section)) {
                     menuUrls.add(this.normalizeUrl(link.href));
                     this.menuStructure.set(section, 
@@ -54,7 +63,9 @@ class UPIICSAScraper {
                 }
             });
         } else {
-            menuLinks.forEach(link => menuUrls.add(this.normalizeUrl(link.href)));
+            [...mainMenuLinks, ...subMenuLinks].forEach(link => 
+                menuUrls.add(this.normalizeUrl(link.href))
+            );
         }
 
         return Array.from(menuUrls);
@@ -140,7 +151,6 @@ class UPIICSAScraper {
             }
 
             console.log(`Scraping completed. Processed ${this.results.size} pages.`);
-            console.log('Menu structure:', this.menuStructure);
             return this.results;
         } catch (error) {
             console.error('Error during scraping:', error);
