@@ -30,11 +30,13 @@ serve(async (req) => {
     try {
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ProxyBot/1.0)',
-          'Accept': '*/*',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
         },
         redirect: 'follow',
         signal: controller.signal,
@@ -48,6 +50,10 @@ serve(async (req) => {
       }
 
       const html = await response.text();
+      
+      if (!html) {
+        throw new Error('Empty response received');
+      }
 
       return new Response(
         JSON.stringify({ html }),
@@ -64,7 +70,19 @@ serve(async (req) => {
     } catch (fetchError) {
       clearTimeout(timeout);
       console.error('Fetch error:', fetchError);
-      throw new Error(`Error fetching URL (${url}): ${fetchError.message}`);
+      
+      // Return a more detailed error response
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error al obtener la URL',
+          details: fetchError.message,
+          url: url
+        }),
+        { 
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
   } catch (error) {
     console.error('Error in proxy:', error);
