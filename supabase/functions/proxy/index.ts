@@ -7,6 +7,56 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const browserHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Connection': 'keep-alive',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-User': '?1',
+  'Sec-Fetch-Dest': 'document',
+};
+
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+  let lastError;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      
+      const response = await fetch(url, {
+        headers: browserHeaders,
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`Attempt ${i + 1} failed:`, error);
+      lastError = error;
+      
+      if (i < maxRetries - 1) {
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -24,31 +74,8 @@ serve(async (req) => {
 
     console.log(`Proxying request to: ${url}`);
     
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
     try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
-        },
-        redirect: 'follow',
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      const response = await fetchWithRetry(url);
       const html = await response.text();
       
       if (!html) {
@@ -68,10 +95,8 @@ serve(async (req) => {
         }
       );
     } catch (fetchError) {
-      clearTimeout(timeout);
       console.error('Fetch error:', fetchError);
       
-      // Return a more detailed error response
       return new Response(
         JSON.stringify({ 
           error: 'Error al obtener la URL',
@@ -88,9 +113,8 @@ serve(async (req) => {
     console.error('Error in proxy:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Error al obtener la URL', 
-        details: error.message,
-        stack: error.stack 
+        error: 'Error interno del servidor', 
+        details: error.message
       }),
       { 
         status: 500, 
