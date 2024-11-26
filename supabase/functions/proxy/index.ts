@@ -20,6 +20,9 @@ const browserHeaders = {
   'Sec-Fetch-Mode': 'navigate',
   'Sec-Fetch-User': '?1',
   'Sec-Fetch-Dest': 'document',
+  'Host': 'www.upiicsa.ipn.mx',
+  'Origin': 'https://www.upiicsa.ipn.mx',
+  'Referer': 'https://www.upiicsa.ipn.mx/'
 };
 
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
@@ -27,6 +30,8 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   
   for (let i = 0; i < maxRetries; i++) {
     try {
+      console.log(`Attempt ${i + 1} to fetch ${url}`);
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
       
@@ -34,6 +39,7 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
         headers: browserHeaders,
         redirect: 'follow',
         signal: controller.signal,
+        method: 'GET',
       });
       
       clearTimeout(timeout);
@@ -42,14 +48,25 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return response;
+      const text = await response.text();
+      if (!text) {
+        throw new Error('Empty response received');
+      }
+      
+      return new Response(text, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html;charset=utf-8'
+        }
+      });
     } catch (error) {
       console.error(`Attempt ${i + 1} failed:`, error);
       lastError = error;
       
       if (i < maxRetries - 1) {
-        // Wait before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        const delay = Math.pow(2, i) * 1000;
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
@@ -58,6 +75,7 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -68,7 +86,10 @@ serve(async (req) => {
     if (!url) {
       return new Response(
         JSON.stringify({ error: 'URL requerida' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -78,10 +99,6 @@ serve(async (req) => {
       const response = await fetchWithRetry(url);
       const html = await response.text();
       
-      if (!html) {
-        throw new Error('Empty response received');
-      }
-
       return new Response(
         JSON.stringify({ html }),
         { 
