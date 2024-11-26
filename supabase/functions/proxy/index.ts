@@ -9,20 +9,12 @@ const corsHeaders = {
 
 const browserHeaders = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-  'Accept-Encoding': 'gzip, deflate, br',
+  'Accept-Encoding': 'gzip, deflate',
+  'Connection': 'keep-alive',
   'Cache-Control': 'no-cache',
   'Pragma': 'no-cache',
-  'Connection': 'keep-alive',
-  'Upgrade-Insecure-Requests': '1',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-User': '?1',
-  'Sec-Fetch-Dest': 'document',
-  'Host': 'www.upiicsa.ipn.mx',
-  'Origin': 'https://www.upiicsa.ipn.mx',
-  'Referer': 'https://www.upiicsa.ipn.mx/'
 };
 
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
@@ -32,17 +24,10 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
     try {
       console.log(`Attempt ${i + 1} to fetch ${url}`);
       
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-      
       const response = await fetch(url, {
         headers: browserHeaders,
         redirect: 'follow',
-        signal: controller.signal,
-        method: 'GET',
       });
-      
-      clearTimeout(timeout);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -75,7 +60,6 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
