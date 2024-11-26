@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,56 +7,45 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const browserHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-  'Accept-Encoding': 'gzip, deflate',
-  'Connection': 'keep-alive',
-  'Cache-Control': 'no-cache',
-  'Pragma': 'no-cache',
-};
+async function scrapeWithPuppeteer(url: string): Promise<string> {
+  console.log(`Starting Puppeteer for ${url}`);
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
-async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
-  let lastError;
-  
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      console.log(`Attempt ${i + 1} to fetch ${url}`);
-      
-      const response = await fetch(url, {
-        headers: browserHeaders,
-        redirect: 'follow',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const text = await response.text();
-      if (!text) {
-        throw new Error('Empty response received');
-      }
-      
-      return new Response(text, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html;charset=utf-8'
-        }
-      });
-    } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error);
-      lastError = error;
-      
-      if (i < maxRetries - 1) {
-        const delay = Math.pow(2, i) * 1000;
-        console.log(`Waiting ${delay}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
+  try {
+    const page = await browser.newPage();
+    
+    // Set viewport and user agent
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    // Enable JavaScript and wait until network is idle
+    await page.setJavaScriptEnabled(true);
+    
+    console.log(`Navigating to ${url}`);
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    // Wait for content to load
+    await page.waitForSelector('body');
+    
+    // Get the full HTML content
+    const html = await page.content();
+    
+    if (!html) {
+      throw new Error('No HTML content found');
     }
+
+    return html;
+  } catch (error) {
+    console.error('Error in Puppeteer:', error);
+    throw error;
+  } finally {
+    await browser.close();
   }
-  
-  throw lastError;
 }
 
 serve(async (req) => {
@@ -77,11 +66,10 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Proxying request to: ${url}`);
+    console.log(`Processing request for: ${url}`);
     
     try {
-      const response = await fetchWithRetry(url);
-      const html = await response.text();
+      const html = await scrapeWithPuppeteer(url);
       
       return new Response(
         JSON.stringify({ html }),
@@ -95,13 +83,13 @@ serve(async (req) => {
           } 
         }
       );
-    } catch (fetchError) {
-      console.error('Fetch error:', fetchError);
+    } catch (scrapeError) {
+      console.error('Scraping error:', scrapeError);
       
       return new Response(
         JSON.stringify({ 
           error: 'Error al obtener la URL',
-          details: fetchError.message,
+          details: scrapeError.message,
           url: url
         }),
         { 
@@ -111,7 +99,7 @@ serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error('Error in proxy:', error);
+    console.error('Server error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Error interno del servidor', 
