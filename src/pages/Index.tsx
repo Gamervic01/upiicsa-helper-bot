@@ -9,7 +9,16 @@ const Index = () => {
           <ThemeToggle />
         </div>
         
-        <div className="text-center mb-8 animate-fade-in">
+        <div className="text-center mb-8 animate-fade-in relative">
+          {/* Quetzalcoatl Animation */}
+          <div className="absolute -top-16 right-0 lg:-right-20 w-32 h-32 opacity-0 animate-[float_4s_ease-in-out_infinite] animate-[fade-in_1s_ease-out_forwards]">
+            <img
+              src="/lovable-uploads/quetzalcoatl.png"
+              alt="Quetzalcoatl UPIICSA"
+              className="w-full h-full object-contain transform hover:scale-110 transition-transform duration-300"
+            />
+          </div>
+
           <div className="flex items-center justify-center gap-4 mb-6">
             <img
               src="/lovable-uploads/f5d0b981-f909-4467-b448-4489a5c728e2.png"
