@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Snake } from "lucide-react";
+import { Bird } from "lucide-react";
 
 interface ChatMessageProps {
   message: string;
@@ -16,7 +16,7 @@ export const ChatMessage = ({ message, isBot }: ChatMessageProps) => {
     >
       {isBot && (
         <div className="w-8 h-8 rounded-full bg-ipn-primary/10 flex items-center justify-center mr-2 transition-colors duration-300">
-          <Snake className="h-5 w-5 text-ipn-primary transition-colors duration-300" />
+          <Bird className="h-5 w-5 text-ipn-primary transition-colors duration-300" />
         </div>
       )}
       <div
