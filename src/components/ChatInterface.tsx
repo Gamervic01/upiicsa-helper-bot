@@ -48,10 +48,9 @@ export const ChatInterface = () => {
       // Primero intentamos obtener una respuesta predefinida
       let respuesta = TODAS_LAS_PREGUNTAS[text];
       
-      // Si no hay respuesta predefinida, usamos la IA
+      // Si no hay respuesta predefinida, usamos la IA local
       if (!respuesta) {
-        const apiKey = process.env.PERPLEXITY_API_KEY || '';
-        respuesta = await getAIResponse(text, apiKey);
+        respuesta = await getAIResponse(text);
       }
 
       const newBotMessage = {

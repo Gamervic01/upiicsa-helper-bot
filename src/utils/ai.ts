@@ -1,36 +1,35 @@
-export const getAIResponse = async (message: string, apiKey: string) => {
+import { pipeline } from '@huggingface/transformers';
+
+let model: any = null;
+
+const initializeModel = async () => {
+  if (!model) {
+    console.log('Inicializando modelo de IA...');
+    model = await pipeline(
+      'text-generation',
+      'Xenova/distilgpt2-spanish',
+      { device: 'cpu' }
+    );
+    console.log('Modelo de IA inicializado');
+  }
+  return model;
+};
+
+export const getAIResponse = async (message: string) => {
   try {
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres un asistente virtual amigable de UPIICSA (Unidad Profesional Interdisciplinaria de Ingeniería y Ciencias Sociales y Administrativas) del IPN (Instituto Politécnico Nacional). Tu objetivo es ayudar a los estudiantes y visitantes con información sobre la escuela, trámites y servicios. Debes ser cordial y profesional, manteniendo un tono amigable. Responde siempre en español.'
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
+    const generator = await initializeModel();
+    
+    const systemPrompt = 'Eres un asistente virtual amigable de UPIICSA (Unidad Profesional Interdisciplinaria de Ingeniería y Ciencias Sociales y Administrativas) del IPN. Responde: ';
+    
+    const result = await generator(systemPrompt + message, {
+      max_new_tokens: 100,
+      temperature: 0.7,
+      repetition_penalty: 1.2,
     });
 
-    if (!response.ok) {
-      throw new Error('Error al obtener respuesta de la IA');
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
+    return result[0].generated_text.replace(systemPrompt, '');
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error al generar respuesta:', error);
     return 'Lo siento, hubo un error al procesar tu mensaje. ¿Podrías intentarlo de nuevo?';
   }
 };
