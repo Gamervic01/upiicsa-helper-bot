@@ -1,5 +1,6 @@
 import { ChatInterface } from "@/components/ChatInterface";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DataUpdateForm } from "@/components/DataUpdateForm";
 
 const Index = () => {
   return (
@@ -40,6 +41,11 @@ const Index = () => {
         </div>
         
         <ChatInterface />
+
+        <div className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4 text-center">Actualizar Datos</h2>
+          <DataUpdateForm />
+        </div>
 
         <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>Unidad Profesional Interdisciplinaria de Ingeniería y Ciencias Sociales y Administrativas</p>
