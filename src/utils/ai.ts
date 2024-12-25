@@ -5,17 +5,12 @@ let model: any = null;
 const initializeModel = async () => {
   if (!model) {
     console.log('Inicializando modelo de IA...');
-    try {
-      model = await pipeline(
-        'text-generation',
-        'PlanTL-GOB-ES/gpt2-small-bne',  // Using a public Spanish model
-        { device: 'cpu' }
-      );
-      console.log('Modelo de IA inicializado');
-    } catch (error) {
-      console.error('Error al inicializar el modelo:', error);
-      throw error;
-    }
+    model = await pipeline(
+      'text-generation',
+      'Xenova/distilgpt2-spanish',
+      { device: 'cpu' }
+    );
+    console.log('Modelo de IA inicializado');
   }
   return model;
 };
