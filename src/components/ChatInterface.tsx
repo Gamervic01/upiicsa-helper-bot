@@ -4,7 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { shuffle } from "lodash";
 import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
-import { procesarRespuesta } from "../utils/messageProcessor";
+import { getAIResponse } from "../utils/ai";
 
 interface Message {
   text: string;
@@ -34,7 +34,7 @@ export const ChatInterface = () => {
     setSuggestedQuestions(preguntasAleatorias);
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     const newUserMessage = {
       text,
       isBot: false,
@@ -43,9 +43,17 @@ export const ChatInterface = () => {
     
     setMessages(prev => [...prev, newUserMessage]);
     setIsTyping(true);
-    
-    setTimeout(() => {
-      const respuesta = procesarRespuesta(text, setUserName, messages);
+
+    try {
+      // Primero intentamos obtener una respuesta predefinida
+      let respuesta = TODAS_LAS_PREGUNTAS[text];
+      
+      // Si no hay respuesta predefinida, usamos la IA
+      if (!respuesta) {
+        const apiKey = process.env.PERPLEXITY_API_KEY || '';
+        respuesta = await getAIResponse(text, apiKey);
+      }
+
       const newBotMessage = {
         text: respuesta,
         isBot: true,
@@ -53,9 +61,18 @@ export const ChatInterface = () => {
       };
       
       setMessages(prev => [...prev, newBotMessage]);
-      setIsTyping(false);
       actualizarPreguntasSugeridas();
-    }, Math.random() * 1000 + 500);
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage = {
+        text: "Lo siento, hubo un error al procesar tu mensaje. ¿Podrías intentarlo de nuevo?",
+        isBot: true,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
