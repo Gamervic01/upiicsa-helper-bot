@@ -21,8 +21,7 @@ export class FirecrawlService {
         limit: 1000, // Crawl hasta 1000 páginas
         scrapeOptions: {
           formats: ['markdown', 'html'],
-          selectors: [
-            // Selectores específicos para extraer información relevante
+          elements: [
             'main',
             'article',
             '.content',
