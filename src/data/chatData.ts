@@ -1,4 +1,23 @@
+import {
+  administracionIndustrialData,
+  cienciasInformaticaData,
+  ingenieriaInformaticaData,
+  ingenieriaTransporteData,
+  ingenieriaFerroviariaData,
+  ingenieriaIndustrialData,
+  carrerasUPIICSA
+} from './careers';
+
 export const TODAS_LAS_PREGUNTAS = {
+  // Información de Carreras
+  ...carrerasUPIICSA,
+  ...administracionIndustrialData,
+  ...cienciasInformaticaData,
+  ...ingenieriaInformaticaData,
+  ...ingenieriaTransporteData,
+  ...ingenieriaFerroviariaData,
+  ...ingenieriaIndustrialData,
+
   // Información Académica
   "¿Cuál es el horario de servicios escolares?": 
     "El horario de atención de servicios escolares es:\n\n" +
@@ -99,7 +118,7 @@ export const TODAS_LAS_PREGUNTAS = {
     "🏭 IIA (Industrial):\n" +
     "- Edificio de Gobierno, 3er Piso\n" +
     "- Coordinador: M. en C. Sergio Fuenlabrada Velázquez\n" +
-    "- Extensión: 70069\n\n" +
+    "- Extensión: 70069\n" +
     "📊 LA (Administración):\n" +
     "- Edificio de Gobierno, 4to Piso\n" +
     "- Coordinador: M. en C. María Elena Marín Conde\n" +
