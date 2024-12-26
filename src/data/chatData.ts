@@ -30,7 +30,7 @@ export const TODAS_LAS_PREGUNTAS = {
     "⚠️ Recomendaciones:\n" +
     "- Llegar al menos 30 minutos antes del cierre\n" +
     "- Traer toda la documentación necesaria\n" +
-    "- Verificar requisitos específicos en la página web oficial\n\n" +
+    "- Verificar requisitos específicos en <a href='https://www.upiicsa.ipn.mx/estudiantes/servicios-escolares.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Servicios Escolares</a>\n\n" +
     "📞 Contacto:\n" +
     "- Teléfono: 55-5624-2000 ext. 70001\n" +
     "- Correo: servicios.escolares@upiicsa.ipn.mx",

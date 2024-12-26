@@ -1,13 +1,14 @@
 export const ingenieriaIndustrialData = {
   "¿Qué es la Ingeniería Industrial?":
-    "La Ingeniería Industrial (II) forma profesionales especializados en la optimización de sistemas productivos y de servicios, integrando recursos humanos, materiales, financieros y tecnológicos.\n\n" +
+    "La Ingeniería Industrial forma profesionales especializados en la optimización de sistemas productivos y de servicios.\n\n" +
     "🎯 Perfil de Egreso:\n" +
     "- Optimización de procesos\n" +
     "- Gestión de calidad\n" +
     "- Logística y producción\n" +
     "- Seguridad industrial\n" +
     "- Mejora continua\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ii-industrial.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/iind/plan-estudios.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>\n\n" +
+    "🔗 Más información: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/iind.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Página de la carrera</a>",
 
   "¿Cuál es el campo laboral de Ingeniería Industrial?":
     "El Ingeniero Industrial puede trabajar en:\n\n" +
