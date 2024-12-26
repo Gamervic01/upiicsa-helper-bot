@@ -7,7 +7,7 @@ export const ingenieriaFerroviariaData = {
     "- Señalización y control\n" +
     "- Material rodante\n" +
     "- Gestión de operaciones\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/if.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=62&nombre=Ingeniería-Ferroviaria' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
 
   "¿Cuál es el plan de estudios de IF?":
     "El plan de estudios de IF se compone de 9 semestres:\n\n" +
@@ -22,7 +22,7 @@ export const ingenieriaFerroviariaData = {
     "- Materiales\n" +
     "- Sistemas Ferroviarios\n\n" +
     "Para ver el plan completo, visita: " +
-    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/if.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IF</a>",
+    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=62&nombre=Ingeniería-Ferroviaria' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IF</a>",
 
   "¿Qué materias tiene IF?":
     "Las materias de IF se dividen en áreas:\n\n" +

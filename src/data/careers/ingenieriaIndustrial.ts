@@ -7,7 +7,7 @@ export const ingenieriaIndustrialData = {
     "- Logística y producción\n" +
     "- Seguridad industrial\n" +
     "- Mejora continua\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/iind.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=63&nombre=Ingeniería-Industrial' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
 
   "¿Cuál es el plan de estudios de IIND?":
     "El plan de estudios de IIND se compone de 9 semestres:\n\n" +
@@ -22,7 +22,7 @@ export const ingenieriaIndustrialData = {
     "- Economía\n" +
     "- Investigación de Operaciones\n\n" +
     "Para ver el plan completo, visita: " +
-    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/iind.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IIND</a>",
+    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=63&nombre=Ingeniería-Industrial' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IIND</a>",
 
   "¿Qué materias tiene IIND?":
     "Las materias de IIND se dividen en áreas:\n\n" +

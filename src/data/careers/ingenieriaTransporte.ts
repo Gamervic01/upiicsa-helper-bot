@@ -7,7 +7,7 @@ export const ingenieriaTransporteData = {
     "- Sistemas de tránsito\n" +
     "- Movilidad urbana\n" +
     "- Gestión de flotas\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/it.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=61&nombre=Ingeniería-en-Transporte' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
 
   "¿Cuál es el plan de estudios de IT?":
     "El plan de estudios de IT se compone de 9 semestres:\n\n" +
@@ -22,7 +22,7 @@ export const ingenieriaTransporteData = {
     "- Economía del Transporte\n" +
     "- Sistemas de Transporte\n\n" +
     "Para ver el plan completo, visita: " +
-    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/it.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IT</a>",
+    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=61&nombre=Ingeniería-en-Transporte' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios IT</a>",
 
   "¿Qué materias tiene IT?":
     "Las materias de IT se dividen en áreas:\n\n" +

@@ -7,7 +7,7 @@ export const administracionIndustrialData = {
     "- Planeación estratégica\n" +
     "- Optimización de operaciones\n" +
     "- Desarrollo organizacional\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/lai.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=58&nombre=Licenciatura-en-Administración-Industrial' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
 
   "¿Cuál es el plan de estudios de LAI?":
     "El plan de estudios de LAI se compone de 9 semestres:\n\n" +
@@ -24,7 +24,7 @@ export const administracionIndustrialData = {
     "- Economía\n" +
     "- Derecho Laboral\n\n" +
     "Y así sucesivamente hasta el 9° semestre. Para ver el plan completo, visita: " +
-    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/lai.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios LAI</a>",
+    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=58&nombre=Licenciatura-en-Administración-Industrial' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios LAI</a>",
 
   "¿Qué materias tiene LAI?":
     "Las materias de LAI se dividen en áreas:\n\n" +

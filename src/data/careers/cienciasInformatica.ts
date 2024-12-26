@@ -7,7 +7,7 @@ export const cienciasInformaticaData = {
     "- Análisis de sistemas\n" +
     "- Inteligencia artificial\n" +
     "- Seguridad informática\n\n" +
-    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/lci.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
+    "📚 Plan de Estudios: <a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=59&nombre=Licenciatura-en-Ciencias-de-la-Informática' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Ver plan completo</a>",
 
   "¿Cuál es el plan de estudios de LCI?":
     "El plan de estudios de LCI se compone de 9 semestres:\n\n" +
@@ -22,7 +22,7 @@ export const cienciasInformaticaData = {
     "- Bases de Datos\n" +
     "- Sistemas Operativos\n\n" +
     "Para ver el plan completo, visita: " +
-    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/lci.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios LCI</a>",
+    "<a href='https://www.upiicsa.ipn.mx/oferta-educativa/ver-carrera.html?lg=es&id=59&nombre=Licenciatura-en-Ciencias-de-la-Informática' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>Plan de Estudios LCI</a>",
 
   "¿Qué materias tiene LCI?":
     "Las materias de LCI se dividen en áreas:\n\n" +
