@@ -30,15 +30,16 @@ const findBestMatch = (userInput: string, possibleMatches: string[]): string | n
 
 const analizarIntencion = (pregunta: string): string => {
   const intenciones = {
-    saludo: /(hola|buenos días|buenas tardes|buenas noches|qué tal|hey|como estas|que tal)/i,
-    despedida: /(adiós|hasta luego|chao|bye|nos vemos)/i,
-    agradecimiento: /(gracias|te agradezco|thanks)/i,
-    afirmacion: /^(si|sí|claro|por supuesto|efectivamente|exacto)/i,
-    negacion: /^(no|nel|nop|para nada|negativo)/i,
-    duda: /(no entiendo|no comprendo|podrías explicar|puedes aclarar|qué significa)/i,
-    frustracion: /(no puedo|es difícil|me cuesta|estoy atorado|ayuda)/i,
-    urgencia: /(urgente|rápido|pronto|necesito.*ahora|inmediato)/i,
-    estadoAnimo: /(como estas|que tal estas|como te encuentras|como te va|como andas)/i
+    saludo: /(hola|buenos días|buenas tardes|buenas noches|qué tal|hey|como estas|que tal|hi|hello|onda|pex)/i,
+    despedida: /(adiós|hasta luego|chao|bye|nos vemos|hasta pronto|cuidate)/i,
+    agradecimiento: /(gracias|te agradezco|thanks|thx|ty)/i,
+    afirmacion: /^(si|sí|claro|por supuesto|efectivamente|exacto|simon|sep)/i,
+    negacion: /^(no|nel|nop|para nada|negativo|nah)/i,
+    duda: /(no entiendo|no comprendo|podrías explicar|puedes aclarar|qué significa|como)/i,
+    frustracion: /(no puedo|es difícil|me cuesta|estoy atorado|ayuda|help)/i,
+    urgencia: /(urgente|rápido|pronto|necesito.*ahora|inmediato|urgent)/i,
+    estadoAnimo: /(como estas|que tal estas|como te encuentras|como te va|como andas|que onda|que pex)/i,
+    presentacion: /(me llamo|soy|mi nombre|me dicen)/i
   };
 
   for (const [intencion, patron] of Object.entries(intenciones)) {
@@ -58,7 +59,9 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
       "¡Muy bien, gracias por preguntar! ¿En qué puedo ayudarte hoy? 😊",
       "¡Excelente! Listo para ayudarte en lo que necesites. ¿Qué te gustaría saber? 🌟",
       "¡Genial! Me alegra que preguntes. ¿Hay algo específico en lo que pueda ayudarte? 💫",
-      "¡Muy bien! Siempre feliz de poder ayudar. ¿Qué necesitas? 😄"
+      "¡Muy bien! Siempre feliz de poder ayudar. ¿Qué necesitas? 😄",
+      "¡Todo chido! ¿En qué te puedo ayudar? 🚀",
+      "¡Qué onda! Aquí andamos al 100, ¿qué necesitas? 😎"
     ];
     return respuestas[Math.floor(Math.random() * respuestas.length)];
   }
@@ -70,30 +73,28 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
         "¡Hola! ¿En qué puedo ayudarte hoy? 😊",
         "¡Qué gusto saludarte! ¿Cómo puedo ayudarte? 👋",
         "¡Hola! Estoy aquí para resolver tus dudas. ¿Qué necesitas? 🌟",
-        "¡Bienvenido! ¿En qué puedo asistirte hoy? 💫"
+        "¡Bienvenido! ¿En qué puedo asistirte hoy? 💫",
+        "¡Qué onda! ¿Cómo te puedo ayudar? 🤙",
+        "¡Qué tal! ¿En qué te puedo echar la mano? 😄",
+        "¡Hey! ¿Qué necesitas saber sobre UPIICSA? 🎓"
       ];
       return saludos[Math.floor(Math.random() * saludos.length)];
     case "despedida":
-      return "¡Hasta luego! Si necesitas algo más, no dudes en volver. 👋";
+      const despedidas = [
+        "¡Hasta luego! Si necesitas algo más, no dudes en volver. 👋",
+        "¡Nos vemos! Aquí estaré cuando me necesites. 😊",
+        "¡Cuídate mucho! Regresa cuando quieras. 🌟",
+        "¡Bye! Recuerda que estoy aquí para ayudarte 24/7. 💫"
+      ];
+      return despedidas[Math.floor(Math.random() * despedidas.length)];
     case "agradecimiento":
-      return "¡De nada! Estoy aquí para ayudarte. 😊";
-  }
-
-  // Manejar preguntas de seguimiento sobre carreras
-  if (lastBotMessage?.includes("¿Te gustaría saber más detalles sobre alguna carrera")) {
-    const carreras = {
-      isc: "¿Qué significa ISC?",
-      im: "¿Qué significa IM?",
-      ic: "¿Qué significa IC?",
-      iia: "¿Qué significa IIA?",
-      la: "¿Qué significa LA?"
-    };
-
-    for (const [abrev, preguntaCompleta] of Object.entries(carreras)) {
-      if (normalizedPregunta.includes(abrev.toLowerCase())) {
-        return TODAS_LAS_PREGUNTAS[preguntaCompleta];
-      }
-    }
+      const agradecimientos = [
+        "¡De nada! Estoy aquí para ayudarte. 😊",
+        "¡Es un placer! ¿Hay algo más en lo que pueda ayudarte? 🌟",
+        "¡No hay de qué! Para eso estamos. 💫",
+        "¡Con gusto! Si necesitas algo más, no dudes en preguntar. 👍"
+      ];
+      return agradecimientos[Math.floor(Math.random() * agradecimientos.length)];
   }
 
   // Manejar pedidos de clarificación
