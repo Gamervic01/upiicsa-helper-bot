@@ -4,7 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { SuggestedQuestions } from "./SuggestedQuestions";
 import { shuffle } from "lodash";
 import { TODAS_LAS_PREGUNTAS } from "../data/chatData";
-import { getAIResponse } from "../utils/ai";
+import { procesarRespuesta } from "../utils/messageProcessor";
 
 interface Message {
   text: string;
@@ -45,13 +45,8 @@ export const ChatInterface = () => {
     setIsTyping(true);
 
     try {
-      // Primero intentamos obtener una respuesta predefinida
-      let respuesta = TODAS_LAS_PREGUNTAS[text];
-      
-      // Si no hay respuesta predefinida, usamos la IA local
-      if (!respuesta) {
-        respuesta = await getAIResponse(text);
-      }
+      // Procesamos la respuesta usando nuestro procesador de mensajes local
+      const respuesta = procesarRespuesta(text, setUserName, messages);
 
       const newBotMessage = {
         text: respuesta,

@@ -22,8 +22,7 @@ const findBestMatch = (userInput: string, possibleMatches: string[]): string | n
   
   const matches = stringSimilarity.findBestMatch(normalizedInput, normalizedMatches);
   
-  // Aumentamos el umbral de similitud para mejores coincidencias
-  if (matches.bestMatch.rating > 0.7) {
+  if (matches.bestMatch.rating > 0.6) {
     return possibleMatches[matches.bestMatchIndex];
   }
   return null;
@@ -31,14 +30,15 @@ const findBestMatch = (userInput: string, possibleMatches: string[]): string | n
 
 const analizarIntencion = (pregunta: string): string => {
   const intenciones = {
-    saludo: /(hola|buenos días|buenas tardes|buenas noches|qué tal|hey)/i,
+    saludo: /(hola|buenos días|buenas tardes|buenas noches|qué tal|hey|como estas|que tal)/i,
     despedida: /(adiós|hasta luego|chao|bye|nos vemos)/i,
     agradecimiento: /(gracias|te agradezco|thanks)/i,
     afirmacion: /^(si|sí|claro|por supuesto|efectivamente|exacto)/i,
     negacion: /^(no|nel|nop|para nada|negativo)/i,
     duda: /(no entiendo|no comprendo|podrías explicar|puedes aclarar|qué significa)/i,
     frustracion: /(no puedo|es difícil|me cuesta|estoy atorado|ayuda)/i,
-    urgencia: /(urgente|rápido|pronto|necesito.*ahora|inmediato)/i
+    urgencia: /(urgente|rápido|pronto|necesito.*ahora|inmediato)/i,
+    estadoAnimo: /(como estas|que tal estas|como te encuentras|como te va|como andas)/i
   };
 
   for (const [intencion, patron] of Object.entries(intenciones)) {
@@ -52,10 +52,27 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
   const normalizedPregunta = normalizeText(pregunta);
   const intencion = analizarIntencion(pregunta);
 
+  // Respuestas para saludos con pregunta sobre estado de ánimo
+  if (intencion === "estadoAnimo") {
+    const respuestas = [
+      "¡Muy bien, gracias por preguntar! ¿En qué puedo ayudarte hoy? 😊",
+      "¡Excelente! Listo para ayudarte en lo que necesites. ¿Qué te gustaría saber? 🌟",
+      "¡Genial! Me alegra que preguntes. ¿Hay algo específico en lo que pueda ayudarte? 💫",
+      "¡Muy bien! Siempre feliz de poder ayudar. ¿Qué necesitas? 😄"
+    ];
+    return respuestas[Math.floor(Math.random() * respuestas.length)];
+  }
+
   // Manejo de intenciones específicas
   switch (intencion) {
     case "saludo":
-      return "¡Hola! ¿En qué puedo ayudarte hoy? 😊";
+      const saludos = [
+        "¡Hola! ¿En qué puedo ayudarte hoy? 😊",
+        "¡Qué gusto saludarte! ¿Cómo puedo ayudarte? 👋",
+        "¡Hola! Estoy aquí para resolver tus dudas. ¿Qué necesitas? 🌟",
+        "¡Bienvenido! ¿En qué puedo asistirte hoy? 💫"
+      ];
+      return saludos[Math.floor(Math.random() * saludos.length)];
     case "despedida":
       return "¡Hasta luego! Si necesitas algo más, no dudes en volver. 👋";
     case "agradecimiento":
@@ -79,7 +96,7 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
     }
   }
 
-  // Manejar pedidos de clarificación con más contexto
+  // Manejar pedidos de clarificación
   const clarificationPatterns = [
     /(?:puedes|podrías|puedas) explicar(?:me|lo)?/i,
     /no (entiendo|entendí)/i,
@@ -98,7 +115,7 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
     }
   }
 
-  // Detectar patrones emocionales con respuestas más empáticas
+  // Detectar patrones emocionales
   const patronesEmocionales = {
     tristeza: /(triste|mal|deprimid|llorar|solo)/i,
     preocupacion: /(preocupad|nervios|ansios|estres)/i,
@@ -118,12 +135,6 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
     }
   }
 
-  // Si el usuario repite la misma pregunta, ofrecer más ayuda
-  const lastUserMessage = [...messages].reverse().find(m => !m.isBot)?.text;
-  if (lastUserMessage && normalizeText(pregunta) === normalizeText(lastUserMessage)) {
-    return "Parece que estás repitiendo tu mensaje. ¿Hay algo específico que no haya quedado claro? Me gustaría ayudarte mejor. 😊";
-  }
-
   return null;
 };
 
@@ -134,7 +145,7 @@ export const procesarRespuesta = (pregunta: string, setUserName: (name: string) 
   const contextualResponse = getContextualResponse(pregunta, messages);
   if (contextualResponse) return contextualResponse;
 
-  // Detectar presentaciones y nombres con más variantes
+  // Detectar presentaciones y nombres
   const presentacionPatterns = [
     /me llamo\s+(\w+)/i,
     /mi nombre es\s+(\w+)/i,
