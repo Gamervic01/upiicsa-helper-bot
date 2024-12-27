@@ -1,6 +1,6 @@
 export const careerServicesData = {
   "¿Qué son las materias electivas?":
-    "Información sobre electivas en: <a href='https://www.upiicsa.ipn.mx/estudiantes/electivas.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/estudiantes/electivas.html</a>\n\n" +
+    "Las materias electivas son parte del plan de estudios flexible de UPIICSA.\n\n" +
     "📚 Características:\n" +
     "- Complementan tu formación\n" +
     "- Flexibilidad curricular\n" +
@@ -11,7 +11,7 @@ export const careerServicesData = {
     "- Registrar en SAES",
 
   "¿Qué seminarios de titulación hay?":
-    "Consulta los seminarios disponibles en: <a href='https://www.upiicsa.ipn.mx/educacion-continua/seminarios-de-titulacion.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/educacion-continua/seminarios-de-titulacion.html</a>\n\n" +
+    "Consulta los seminarios disponibles en: <a href='https://www.upiicsa.ipn.mx/educacion-continua/cursos-diplomados.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/educacion-continua/cursos-diplomados.html</a>\n\n" +
     "🎓 Tipos de seminarios:\n" +
     "- Administración\n" +
     "- Informática\n" +

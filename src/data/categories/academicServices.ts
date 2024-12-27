@@ -33,16 +33,14 @@ export const academicServicesData = {
     "- Mínimo 240 horas\n" +
     "- Horario flexible",
 
-  "¿Dónde encuentro información sobre titulación?":
-    "Toda la información sobre titulación está en: <a href='https://www.upiicsa.ipn.mx/egresados/titulacion.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/egresados/titulacion.html</a>\n\n" +
-    "🎓 Opciones de titulación:\n" +
-    "- Tesis\n" +
-    "- Seminario\n" +
-    "- Escolaridad\n" +
-    "- Experiencia profesional\n" +
-    "- ETS/EGEL\n\n" +
-    "📝 Requisitos generales:\n" +
-    "- Servicio social liberado\n" +
-    "- 100% de créditos\n" +
-    "- Nivel de inglés B1"
+  "¿Dónde está la biblioteca?":
+    "Visita la biblioteca en: <a href='https://www.upiicsa.ipn.mx/estudiantes/biblioteca.html' target='_blank' rel='noopener noreferrer' class='text-blue-500 hover:text-blue-700 underline'>www.upiicsa.ipn.mx/estudiantes/biblioteca.html</a>\n\n" +
+    "📚 Servicios:\n" +
+    "- Préstamo de libros\n" +
+    "- Sala de lectura\n" +
+    "- Recursos digitales\n" +
+    "- Bases de datos\n\n" +
+    "⏰ Horario:\n" +
+    "Lunes a Viernes: 8:00 - 20:00\n" +
+    "Sábados: 8:00 - 14:00"
 };
