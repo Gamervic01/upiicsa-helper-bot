@@ -39,7 +39,9 @@ const analizarIntencion = (pregunta: string): string => {
     frustracion: /(no puedo|es difícil|me cuesta|estoy atorado|ayuda|help)/i,
     urgencia: /(urgente|rápido|pronto|necesito.*ahora|inmediato|urgent)/i,
     estadoAnimo: /(como estas|que tal estas|como te encuentras|como te va|como andas|que onda|que pex)/i,
-    presentacion: /(me llamo|soy|mi nombre|me dicen)/i
+    presentacion: /(me llamo|soy|mi nombre|me dicen)/i,
+    consejo: /(dame un consejo|necesito un consejo|aconséjame|que me aconsejas|que hago)/i,
+    apoyo: /(me siento mal|estoy triste|necesito ayuda|no puedo más|ayúdame)/i
   };
 
   for (const [intencion, patron] of Object.entries(intenciones)) {
@@ -95,6 +97,53 @@ const getContextualResponse = (pregunta: string, messages: Message[]): string | 
         "¡Con gusto! Si necesitas algo más, no dudes en preguntar. 👍"
       ];
       return agradecimientos[Math.floor(Math.random() * agradecimientos.length)];
+    case "consejo":
+      const consejos = [
+        "Recuerda que cada desafío es una oportunidad para crecer. ¡Tú puedes! 💪",
+        "A veces el primer paso es el más difícil, pero vale la pena darlo. 🌟",
+        "No te compares con otros, cada quien tiene su propio camino. 🌱",
+        "Es normal sentirse abrumado a veces. Toma un respiro y sigue adelante. 🌈",
+        "El éxito es la suma de pequeños esfuerzos repetidos día tras día. ✨",
+        "Confía en ti mismo, has llegado más lejos de lo que crees. 🚀",
+        "No tengas miedo de pedir ayuda, es una señal de fortaleza, no de debilidad. 🤝",
+        "Cada día es una nueva oportunidad para ser mejor. ¡Aprovéchala! 🌅"
+      ];
+      return consejos[Math.floor(Math.random() * consejos.length)];
+    case "apoyo":
+      const mensajesApoyo = [
+        "Entiendo que estés pasando por un momento difícil. No estás solo/a en esto. 💙\n\n" +
+        "Aquí tienes algunos números de ayuda:\n" +
+        "📞 Línea de la Vida (24/7): 800 911 2000\n" +
+        "📞 SAPTEL: 55 5259 8121\n" +
+        "📞 UNAM Línea de Emergencia: 55 5025 0855",
+        
+        "Me preocupa que te sientas así. Hay personas preparadas para escucharte y ayudarte:\n\n" +
+        "📞 Línea de la Vida (24/7): 800 911 2000\n" +
+        "Recuerda que buscar ayuda es un acto de valentía. 💙",
+        
+        "Lamento que estés pasando por esto. No dudes en buscar ayuda profesional:\n\n" +
+        "📞 SAPTEL: 55 5259 8121\n" +
+        "📞 Línea de la Vida: 800 911 2000\n\n" +
+        "Tu bienestar es importante. 🫂"
+      ];
+      return mensajesApoyo[Math.floor(Math.random() * mensajesApoyo.length)];
+  }
+
+  // Manejar preguntas de seguimiento sobre carreras
+  if (lastBotMessage?.includes("¿Te gustaría saber más detalles sobre alguna carrera")) {
+    const carreras = {
+      isc: "¿Qué significa ISC?",
+      im: "¿Qué significa IM?",
+      ic: "¿Qué significa IC?",
+      iia: "¿Qué significa IIA?",
+      la: "¿Qué significa LA?"
+    };
+
+    for (const [abrev, preguntaCompleta] of Object.entries(carreras)) {
+      if (normalizedPregunta.includes(abrev.toLowerCase())) {
+        return TODAS_LAS_PREGUNTAS[preguntaCompleta];
+      }
+    }
   }
 
   // Manejar pedidos de clarificación
